@@ -112,16 +112,17 @@ Mat4 multiplyMat4(const Mat4& a, const Mat4& b) {
 
 // 向量变换（3D到2D投影）
 ImVec2 transformPoint(const Vec3& v, const Mat4& transform, const ImVec2& center) {
-    // 应用变换
-    float x = v.x * transform.m[0] + v.y * transform.m[4] + v.z * transform.m[8] + transform.m[12];
-    float y = v.x * transform.m[1] + v.y * transform.m[5] + v.z * transform.m[9] + transform.m[13];
-    float z = v.x * transform.m[2] + v.y * transform.m[6] + v.z * transform.m[10] + transform.m[14];
+    // 应用3D变换
+    float x = v.x * transform.m[0] + v.y * transform.m[4] + v.z * transform.m[8];
+    float y = v.x * transform.m[1] + v.y * transform.m[5] + v.z * transform.m[9];
+    float z = v.x * transform.m[2] + v.y * transform.m[6] + v.z * transform.m[10];
     
-    // 简单的透视投影（Z轴影响深度）
-    float depth = 1.0f / (1.0f + z * 0.1f);
+    // 使用正交投影替代透视投影，确保坐标轴旋转时保持垂直
+    // 正交投影不会导致远处的物体变小，更适合保持坐标轴的垂直关系
+    float depth = 1.0f; // 正交投影，深度缩放为1
     
     // 转换到屏幕坐标，并应用平移
-    return ImVec2(center.x + x * depth + panX, center.y + y * depth + panY);
+    return ImVec2(center.x + (x + panX/scale) * depth * 0.5f, center.y + (y + panY/scale) * depth * 0.5f);
 }
 
 // 函数声明
@@ -571,6 +572,7 @@ void drawFrame() {
     Mat4 s = scaleMatrix(scale);
     
     // 组合变换矩阵：先缩放，再绕X轴旋转，最后绕Y轴旋转
+    // 注意：矩阵乘法顺序是从右到左应用变换
     Mat4 transform = multiplyMat4(ry, multiplyMat4(rx, s));
     
     // 绘制xy平面网格
@@ -580,14 +582,14 @@ void drawFrame() {
     ImU32 grid_color = IM_COL32(100, 100, 100, 150);
     
     for (int i = -grid_size; i <= grid_size; i++) {
-        // 绘制水平线 (x = i * grid_spacing, z = 0)
+        // 绘制垂直线 (x = i * grid_spacing, z = 0)
         Vec3 grid_start(i * grid_spacing, -grid_size * grid_spacing, 0.0f);
         Vec3 grid_end(i * grid_spacing, grid_size * grid_spacing, 0.0f);
         ImVec2 start_2d = transformPoint(grid_start, transform, center);
         ImVec2 end_2d = transformPoint(grid_end, transform, center);
         draw_list->AddLine(start_2d, end_2d, grid_color, grid_thickness);
         
-        // 绘制垂直线 (y = i * grid_spacing, z = 0)
+        // 绘制水平线 (y = i * grid_spacing, z = 0)
         grid_start = Vec3(-grid_size * grid_spacing, i * grid_spacing, 0.0f);
         grid_end = Vec3(grid_size * grid_spacing, i * grid_spacing, 0.0f);
         start_2d = transformPoint(grid_start, transform, center);
@@ -829,8 +831,9 @@ void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
     if (isRotating) {
         // 调整旋转速度，更符合通用3D软件体验
         float sensitivity = 0.01f;
+        // 修正旋转方向，使鼠标拖动与视角旋转更符合直觉
         rotationY += delta.x * sensitivity;
-        rotationX += delta.y * sensitivity;
+        rotationX -= delta.y * sensitivity;  // 反向，使鼠标向上拖动时视角向上旋转
         
         // 限制X轴旋转范围，允许更灵活的视角，但避免完全翻转
         if (rotationX > 3.14f) rotationX = 3.14f;
