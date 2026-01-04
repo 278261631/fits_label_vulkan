@@ -38,13 +38,100 @@ VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 
 float sliderValue = 0.0f;
 
+// 视角控制变量
+float rotationX = -0.785f;  // 初始X轴旋转，使z轴朝上显示（-45度）
+float rotationY = 0.785f;   // 初始Y轴旋转，提供更好的视角（45度）
+float scale = 1.0f;
+float panX = 0.0f;
+float panY = 0.0f;
+bool isRotating = false;
+bool isPanning = false;
+ImVec2 lastMousePos;
+
 GLFWwindow* window;
+
+// 辅助结构体和函数：3D变换
+struct Vec3 {
+    float x, y, z;
+    Vec3(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
+};
+
+struct Mat4 {
+    float m[16];
+    Mat4() {
+        // 单位矩阵
+        for (int i = 0; i < 16; i++) m[i] = 0.0f;
+        m[0] = m[5] = m[10] = m[15] = 1.0f;
+    }
+};
+
+// 生成旋转矩阵（绕X轴）
+Mat4 rotateX(float angle) {
+    Mat4 m;
+    float c = cosf(angle);
+    float s = sinf(angle);
+    m.m[5] = c;
+    m.m[6] = -s;
+    m.m[9] = s;
+    m.m[10] = c;
+    return m;
+}
+
+// 生成旋转矩阵（绕Y轴）
+Mat4 rotateY(float angle) {
+    Mat4 m;
+    float c = cosf(angle);
+    float s = sinf(angle);
+    m.m[0] = c;
+    m.m[2] = s;
+    m.m[8] = -s;
+    m.m[10] = c;
+    return m;
+}
+
+// 生成缩放矩阵
+Mat4 scaleMatrix(float s) {
+    Mat4 m;
+    m.m[0] = m.m[5] = m.m[10] = s;
+    return m;
+}
+
+// 矩阵乘法
+Mat4 multiplyMat4(const Mat4& a, const Mat4& b) {
+    Mat4 result;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            result.m[i*4 + j] = 0.0f;
+            for (int k = 0; k < 4; k++) {
+                result.m[i*4 + j] += a.m[i*4 + k] * b.m[k*4 + j];
+            }
+        }
+    }
+    return result;
+}
+
+// 向量变换（3D到2D投影）
+ImVec2 transformPoint(const Vec3& v, const Mat4& transform, const ImVec2& center) {
+    // 应用变换
+    float x = v.x * transform.m[0] + v.y * transform.m[4] + v.z * transform.m[8] + transform.m[12];
+    float y = v.x * transform.m[1] + v.y * transform.m[5] + v.z * transform.m[9] + transform.m[13];
+    float z = v.x * transform.m[2] + v.y * transform.m[6] + v.z * transform.m[10] + transform.m[14];
+    
+    // 简单的透视投影（Z轴影响深度）
+    float depth = 1.0f / (1.0f + z * 0.1f);
+    
+    // 转换到屏幕坐标，并应用平移
+    return ImVec2(center.x + x * depth + panX, center.y + y * depth + panY);
+}
 
 // 函数声明
 void initVulkan();
 void initWindow();
 void mainLoop();
 void cleanup();
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 // 辅助函数：检查扩展支持
 bool checkValidationLayerSupport() {
@@ -62,6 +149,11 @@ void initWindow() {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     window = glfwCreateWindow(WIDTH, HEIGHT, "GLFW + ImGui + Vulkan Demo", nullptr, nullptr);
     glfwSetWindowUserPointer(window, nullptr);
+    
+    // 注册鼠标事件回调
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetCursorPosCallback(window, mouseMoveCallback);
+    glfwSetScrollCallback(window, scrollCallback);
 }
 
 // 创建Vulkan实例
@@ -460,7 +552,8 @@ void drawFrame() {
     ImGui::NewFrame();
 
     // 绘制坐标系
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
+    // 移除NoInputs标志，以便接收鼠标事件
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
     ImGui::Begin("Coordinate System", nullptr, window_flags);
@@ -468,37 +561,80 @@ void drawFrame() {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     ImVec2 display_size = ImGui::GetIO().DisplaySize;
     ImVec2 center = ImVec2(display_size.x * 0.5f, display_size.y * 0.5f);
-    float axis_length = 200.0f;
+    float base_axis_length = 200.0f;
+    float axis_length = base_axis_length * scale;
     float axis_thickness = 2.0f;
+    
+    // 生成变换矩阵
+    Mat4 rx = rotateX(rotationX);
+    Mat4 ry = rotateY(rotationY);
+    Mat4 s = scaleMatrix(scale);
+    
+    // 组合变换矩阵：先缩放，再绕X轴旋转，最后绕Y轴旋转
+    Mat4 transform = multiplyMat4(ry, multiplyMat4(rx, s));
+    
+    // 绘制xy平面网格
+    int grid_size = 10;  // 网格数量
+    float grid_spacing = axis_length / 5.0f;  // 网格间距
+    float grid_thickness = 1.0f;
+    ImU32 grid_color = IM_COL32(100, 100, 100, 150);
+    
+    for (int i = -grid_size; i <= grid_size; i++) {
+        // 绘制水平线 (x = i * grid_spacing, z = 0)
+        Vec3 grid_start(i * grid_spacing, -grid_size * grid_spacing, 0.0f);
+        Vec3 grid_end(i * grid_spacing, grid_size * grid_spacing, 0.0f);
+        ImVec2 start_2d = transformPoint(grid_start, transform, center);
+        ImVec2 end_2d = transformPoint(grid_end, transform, center);
+        draw_list->AddLine(start_2d, end_2d, grid_color, grid_thickness);
+        
+        // 绘制垂直线 (y = i * grid_spacing, z = 0)
+        grid_start = Vec3(-grid_size * grid_spacing, i * grid_spacing, 0.0f);
+        grid_end = Vec3(grid_size * grid_spacing, i * grid_spacing, 0.0f);
+        start_2d = transformPoint(grid_start, transform, center);
+        end_2d = transformPoint(grid_end, transform, center);
+        draw_list->AddLine(start_2d, end_2d, grid_color, grid_thickness);
+    }
+    
+    // 定义3D坐标轴的端点 (z轴朝上的坐标系)
+    Vec3 origin(0.0f, 0.0f, 0.0f);
+    Vec3 x_axis(axis_length, 0.0f, 0.0f);     // X轴 - 红色
+    Vec3 y_axis(0.0f, axis_length, 0.0f);     // Y轴 - 绿色
+    Vec3 z_axis(0.0f, 0.0f, axis_length);     // Z轴 - 蓝色（朝上）
+    
+    // 变换到2D屏幕坐标
+    ImVec2 origin_2d = transformPoint(origin, transform, center);
+    ImVec2 x_axis_2d = transformPoint(x_axis, transform, center);
+    ImVec2 y_axis_2d = transformPoint(y_axis, transform, center);
+    ImVec2 z_axis_2d = transformPoint(z_axis, transform, center);
     
     // 绘制X轴 - 红色
     draw_list->AddLine(
-        ImVec2(center.x - axis_length, center.y),
-        ImVec2(center.x + axis_length, center.y),
+        origin_2d,
+        x_axis_2d,
         IM_COL32(255, 0, 0, 255),
         axis_thickness
     );
     
     // 绘制Y轴 - 绿色
     draw_list->AddLine(
-        ImVec2(center.x, center.y - axis_length),
-        ImVec2(center.x, center.y + axis_length),
+        origin_2d,
+        y_axis_2d,
         IM_COL32(0, 255, 0, 255),
         axis_thickness
     );
     
-    // 绘制Z轴 - 蓝色（投影到2D平面）
+    // 绘制Z轴 - 蓝色（朝上）
     draw_list->AddLine(
-        center,
-        ImVec2(center.x + axis_length * 0.7f, center.y + axis_length * 0.7f),
+        origin_2d,
+        z_axis_2d,
         IM_COL32(0, 0, 255, 255),
         axis_thickness
     );
     
     // 绘制坐标轴标签
-    draw_list->AddText(ImVec2(center.x + axis_length + 5, center.y - 10), IM_COL32(255, 0, 0, 255), "X");
-    draw_list->AddText(ImVec2(center.x + 5, center.y - axis_length - 15), IM_COL32(0, 255, 0, 255), "Y");
-    draw_list->AddText(ImVec2(center.x + axis_length * 0.7f + 5, center.y + axis_length * 0.7f + 5), IM_COL32(0, 0, 255, 255), "Z");
+    draw_list->AddText(ImVec2(x_axis_2d.x + 5.0f, x_axis_2d.y - 10.0f), IM_COL32(255, 0, 0, 255), "X");
+    draw_list->AddText(ImVec2(y_axis_2d.x + 5.0f, y_axis_2d.y - 10.0f), IM_COL32(0, 255, 0, 255), "Y");
+    draw_list->AddText(ImVec2(z_axis_2d.x + 5.0f, z_axis_2d.y - 15.0f), IM_COL32(0, 0, 255, 255), "Z");
     
     ImGui::End();
 
@@ -660,4 +796,82 @@ int main() {
 
     cleanup();
     return EXIT_SUCCESS;
+}
+
+// 鼠标按钮回调函数
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            isRotating = true;
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            lastMousePos = ImVec2((float)xpos, (float)ypos);
+        } else if (action == GLFW_RELEASE) {
+            isRotating = false;
+        }
+    } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+        if (action == GLFW_PRESS) {
+            isPanning = true;
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            lastMousePos = ImVec2((float)xpos, (float)ypos);
+        } else if (action == GLFW_RELEASE) {
+            isPanning = false;
+        }
+    }
+}
+
+// 鼠标移动回调函数
+void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
+    ImVec2 currentPos = ImVec2((float)xpos, (float)ypos);
+    ImVec2 delta = ImVec2(currentPos.x - lastMousePos.x, currentPos.y - lastMousePos.y);
+    
+    if (isRotating) {
+        // 调整旋转速度，更符合通用3D软件体验
+        float sensitivity = 0.01f;
+        rotationY += delta.x * sensitivity;
+        rotationX += delta.y * sensitivity;
+        
+        // 限制X轴旋转范围，允许更灵活的视角，但避免完全翻转
+        if (rotationX > 3.14f) rotationX = 3.14f;
+        if (rotationX < -3.14f) rotationX = -3.14f;
+    } else if (isPanning) {
+        // 平移速度调整，与缩放比例相关，更符合通用3D软件体验
+        float panSensitivity = 1.0f;
+        panX += delta.x * panSensitivity;
+        panY += delta.y * panSensitivity;
+    }
+    
+    lastMousePos = currentPos;
+}
+
+// 鼠标滚轮回调函数
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    // 调整缩放速度
+    float sensitivity = 0.1f;
+    
+    // 基于当前鼠标位置的缩放，更符合通用3D软件体验
+    double mouseX, mouseY;
+    glfwGetCursorPos(window, &mouseX, &mouseY);
+    ImVec2 mousePos((float)mouseX, (float)mouseY);
+    
+    // 计算鼠标到中心的偏移
+    ImVec2 display_size = ImGui::GetIO().DisplaySize;
+    ImVec2 center = ImVec2(display_size.x * 0.5f, display_size.y * 0.5f);
+    ImVec2 mouseOffset = ImVec2(mousePos.x - center.x, mousePos.y - center.y);
+    
+    // 保存当前缩放比例
+    float oldScale = scale;
+    
+    // 计算新的缩放比例
+    scale *= 1.0f + (float)yoffset * sensitivity;
+    
+    // 限制缩放范围
+    if (scale < 0.1f) scale = 0.1f;
+    if (scale > 5.0f) scale = 5.0f;
+    
+    // 调整平移，使鼠标指向的位置保持相对稳定
+    float scaleRatio = scale / oldScale;
+    panX += mouseOffset.x * (1.0f - scaleRatio);
+    panY += mouseOffset.y * (1.0f - scaleRatio);
 }
