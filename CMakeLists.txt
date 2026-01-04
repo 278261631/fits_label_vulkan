@@ -69,7 +69,15 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.90.9
 )
-FetchContent_MakeAvailable(imgui)
+
+# 获取GLM数学库
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG        0.9.9.8
+)
+
+FetchContent_MakeAvailable(imgui glm)
 
 # ImGui Vulkan后端所需的文件
 set(IMGUI_SOURCE_FILES
@@ -82,8 +90,19 @@ set(IMGUI_SOURCE_FILES
     ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
 )
 
+# 项目源文件
+set(PROJECT_SOURCE_FILES
+    src/main.cpp
+    src/core/Application.cpp
+    src/camera/Camera.cpp
+    src/input/InputHandler.cpp
+    src/render/Renderer.cpp
+    src/vulkan/VulkanContext.cpp
+    src/ui/UI.cpp
+)
+
 # 创建可执行文件
-add_executable(demo src/main.cpp ${IMGUI_SOURCE_FILES})
+add_executable(demo ${PROJECT_SOURCE_FILES} ${IMGUI_SOURCE_FILES})
 
 # 包含目录
 target_include_directories(demo PRIVATE
@@ -91,12 +110,20 @@ target_include_directories(demo PRIVATE
     ${glfw_SOURCE_DIR}/include
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
+    ${glm_SOURCE_DIR}
+    src/core
+    src/camera
+    src/input
+    src/render
+    src/vulkan
+    src/ui
 )
 
 # 链接库
 target_link_libraries(demo PRIVATE
     ${Vulkan_LIBRARIES}
     glfw
+    glm
 )
 
 # 平台特定设置
