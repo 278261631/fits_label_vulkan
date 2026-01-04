@@ -288,10 +288,11 @@ void createPipelineLayout() {
     }
 }
 
-// 创建图形管线 - 由于我们只使用ImGui，不需要完整的图形管线
+
+
+// 创建图形管线
 void createGraphicsPipeline() {
-    // ImGui会管理自己的管线，所以这里我们不需要创建复杂的图形管线
-    // 但我们仍然需要创建一个空的管线布局
+    // 图形管线设置为null，因为我们将使用ImGui绘制
     graphicsPipeline = VK_NULL_HANDLE;
 }
 
@@ -458,6 +459,49 @@ void drawFrame() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    // 绘制坐标系
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar;
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+    ImGui::Begin("Coordinate System", nullptr, window_flags);
+    
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 display_size = ImGui::GetIO().DisplaySize;
+    ImVec2 center = ImVec2(display_size.x * 0.5f, display_size.y * 0.5f);
+    float axis_length = 200.0f;
+    float axis_thickness = 2.0f;
+    
+    // 绘制X轴 - 红色
+    draw_list->AddLine(
+        ImVec2(center.x - axis_length, center.y),
+        ImVec2(center.x + axis_length, center.y),
+        IM_COL32(255, 0, 0, 255),
+        axis_thickness
+    );
+    
+    // 绘制Y轴 - 绿色
+    draw_list->AddLine(
+        ImVec2(center.x, center.y - axis_length),
+        ImVec2(center.x, center.y + axis_length),
+        IM_COL32(0, 255, 0, 255),
+        axis_thickness
+    );
+    
+    // 绘制Z轴 - 蓝色（投影到2D平面）
+    draw_list->AddLine(
+        center,
+        ImVec2(center.x + axis_length * 0.7f, center.y + axis_length * 0.7f),
+        IM_COL32(0, 0, 255, 255),
+        axis_thickness
+    );
+    
+    // 绘制坐标轴标签
+    draw_list->AddText(ImVec2(center.x + axis_length + 5, center.y - 10), IM_COL32(255, 0, 0, 255), "X");
+    draw_list->AddText(ImVec2(center.x + 5, center.y - axis_length - 15), IM_COL32(0, 255, 0, 255), "Y");
+    draw_list->AddText(ImVec2(center.x + axis_length * 0.7f + 5, center.y + axis_length * 0.7f + 5), IM_COL32(0, 0, 255, 255), "Z");
+    
+    ImGui::End();
+
     // 创建ImGui UI
     ImGui::Begin("Hello, ImGui!");
     ImGui::Text("This is a simple GLFW + ImGui + Vulkan demo");
@@ -568,7 +612,9 @@ void cleanup() {
     // 清理命令池的代码已移至initVulkan函数中
 
     // 清理管线和布局
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    if (graphicsPipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    }
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
     // 清理帧缓冲
