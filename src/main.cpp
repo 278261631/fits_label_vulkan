@@ -39,8 +39,8 @@ VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 float sliderValue = 0.0f;
 
 // 视角控制变量
-float rotationX = -0.785f;  // 初始X轴旋转，使z轴朝上显示（-45度）
-float rotationY = 0.785f;   // 初始Y轴旋转，提供更好的视角（45度）
+float rotationX = 0.0f;     // 初始X轴旋转为0
+float rotationY = 0.0f;     // 初始Y轴旋转为0，确保z轴朝上，xy平面水平
 float scale = 1.0f;
 float panX = 0.0f;
 float panY = 0.0f;
@@ -66,26 +66,49 @@ struct Mat4 {
 };
 
 // 生成旋转矩阵（绕X轴）
+// 绕X轴旋转，影响Y和Z轴
+// 修正旋转方向，确保z轴朝上
 Mat4 rotateX(float angle) {
     Mat4 m;
     float c = cosf(angle);
     float s = sinf(angle);
+    m.m[0] = 1.0f;
     m.m[5] = c;
-    m.m[6] = -s;
-    m.m[9] = s;
+    m.m[6] = s;
+    m.m[9] = -s;
     m.m[10] = c;
+    m.m[15] = 1.0f;
     return m;
 }
 
 // 生成旋转矩阵（绕Y轴）
+// 绕Y轴旋转，影响X和Z轴
+// 修正旋转方向，确保z轴朝上
 Mat4 rotateY(float angle) {
     Mat4 m;
     float c = cosf(angle);
     float s = sinf(angle);
     m.m[0] = c;
-    m.m[2] = s;
-    m.m[8] = -s;
+    m.m[2] = -s;
+    m.m[5] = 1.0f;
+    m.m[8] = s;
     m.m[10] = c;
+    m.m[15] = 1.0f;
+    return m;
+}
+
+// 生成旋转矩阵（绕Z轴）
+// 绕Z轴旋转，影响X和Y轴
+Mat4 rotateZ(float angle) {
+    Mat4 m;
+    float c = cosf(angle);
+    float s = sinf(angle);
+    m.m[0] = c;
+    m.m[1] = -s;
+    m.m[4] = s;
+    m.m[5] = c;
+    m.m[10] = 1.0f;
+    m.m[15] = 1.0f;
     return m;
 }
 
@@ -110,19 +133,59 @@ Mat4 multiplyMat4(const Mat4& a, const Mat4& b) {
     return result;
 }
 
+// 绘制箭头辅助函数
+void drawArrow(ImDrawList* draw_list, const ImVec2& start, const ImVec2& end, ImU32 color, float thickness) {
+    // 计算箭头的方向向量
+    ImVec2 dir = ImVec2(end.x - start.x, end.y - start.y);
+    float length = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    
+    // 归一化方向向量
+    ImVec2 unit_dir = ImVec2(dir.x / length, dir.y / length);
+    
+    // 计算箭头的两个翅膀的端点
+    float arrow_size = 10.0f; // 箭头大小
+    ImVec2 arrow_perp = ImVec2(-unit_dir.y, unit_dir.x); // 垂直于箭头方向
+    
+    ImVec2 arrow_left = ImVec2(
+        end.x - unit_dir.x * arrow_size + arrow_perp.x * arrow_size * 0.5f,
+        end.y - unit_dir.y * arrow_size + arrow_perp.y * arrow_size * 0.5f
+    );
+    
+    ImVec2 arrow_right = ImVec2(
+        end.x - unit_dir.x * arrow_size - arrow_perp.x * arrow_size * 0.5f,
+        end.y - unit_dir.y * arrow_size - arrow_perp.y * arrow_size * 0.5f
+    );
+    
+    // 绘制主线
+    draw_list->AddLine(start, end, color, thickness);
+    
+    // 绘制箭头翅膀
+    draw_list->AddLine(end, arrow_left, color, thickness);
+    draw_list->AddLine(end, arrow_right, color, thickness);
+}
+
 // 向量变换（3D到2D投影）
+// 纯正交投影，确保坐标轴在任何旋转下都保持垂直
 ImVec2 transformPoint(const Vec3& v, const Mat4& transform, const ImVec2& center) {
     // 应用3D变换
     float x = v.x * transform.m[0] + v.y * transform.m[4] + v.z * transform.m[8];
     float y = v.x * transform.m[1] + v.y * transform.m[5] + v.z * transform.m[9];
     float z = v.x * transform.m[2] + v.y * transform.m[6] + v.z * transform.m[10];
     
-    // 使用正交投影替代透视投影，确保坐标轴旋转时保持垂直
-    // 正交投影不会导致远处的物体变小，更适合保持坐标轴的垂直关系
-    float depth = 1.0f; // 正交投影，深度缩放为1
+    // 纯正交投影，不使用透视效果，确保坐标轴旋转后保持垂直
+    // 修正y轴和z轴的映射关系，确保z轴朝上
+    float screen_x = x;
+    float screen_y = -z; // 用-z作为屏幕y坐标，确保z轴朝上
     
-    // 转换到屏幕坐标，并应用平移
-    return ImVec2(center.x + (x + panX/scale) * depth * 0.5f, center.y + (y + panY/scale) * depth * 0.5f);
+    // 缩放因子，调整坐标系大小
+    float scale_factor = 0.5f;
+    
+    // 转换到屏幕坐标
+    float final_x = center.x + screen_x * scale_factor;
+    float final_y = center.y + screen_y * scale_factor;
+    
+    // 直接在屏幕坐标上应用平移
+    return ImVec2(final_x + panX, final_y + panY);
 }
 
 // 函数声明
@@ -597,11 +660,12 @@ void drawFrame() {
         draw_list->AddLine(start_2d, end_2d, grid_color, grid_thickness);
     }
     
-    // 定义3D坐标轴的端点 (z轴朝上的坐标系)
+    // 定义3D坐标轴的端点 (z轴朝上，xy平面水平的坐标系)
+    // 标准右手坐标系：X水平向右，Y水平向前（屏幕外），Z垂直向上
     Vec3 origin(0.0f, 0.0f, 0.0f);
-    Vec3 x_axis(axis_length, 0.0f, 0.0f);     // X轴 - 红色
-    Vec3 y_axis(0.0f, axis_length, 0.0f);     // Y轴 - 绿色
-    Vec3 z_axis(0.0f, 0.0f, axis_length);     // Z轴 - 蓝色（朝上）
+    Vec3 x_axis(axis_length, 0.0f, 0.0f);     // X轴 - 红色（水平向右）
+    Vec3 y_axis(0.0f, axis_length, 0.0f);     // Y轴 - 绿色（水平向前，屏幕外）
+    Vec3 z_axis(0.0f, 0.0f, axis_length);     // Z轴 - 蓝色（垂直向上）
     
     // 变换到2D屏幕坐标
     ImVec2 origin_2d = transformPoint(origin, transform, center);
@@ -609,29 +673,14 @@ void drawFrame() {
     ImVec2 y_axis_2d = transformPoint(y_axis, transform, center);
     ImVec2 z_axis_2d = transformPoint(z_axis, transform, center);
     
-    // 绘制X轴 - 红色
-    draw_list->AddLine(
-        origin_2d,
-        x_axis_2d,
-        IM_COL32(255, 0, 0, 255),
-        axis_thickness
-    );
+    // 绘制X轴 - 红色，带箭头
+    drawArrow(draw_list, origin_2d, x_axis_2d, IM_COL32(255, 0, 0, 255), axis_thickness);
     
-    // 绘制Y轴 - 绿色
-    draw_list->AddLine(
-        origin_2d,
-        y_axis_2d,
-        IM_COL32(0, 255, 0, 255),
-        axis_thickness
-    );
+    // 绘制Y轴 - 绿色，带箭头
+    drawArrow(draw_list, origin_2d, y_axis_2d, IM_COL32(0, 255, 0, 255), axis_thickness);
     
-    // 绘制Z轴 - 蓝色（朝上）
-    draw_list->AddLine(
-        origin_2d,
-        z_axis_2d,
-        IM_COL32(0, 0, 255, 255),
-        axis_thickness
-    );
+    // 绘制Z轴 - 蓝色（朝上），带箭头
+    drawArrow(draw_list, origin_2d, z_axis_2d, IM_COL32(0, 0, 255, 255), axis_thickness);
     
     // 绘制坐标轴标签
     draw_list->AddText(ImVec2(x_axis_2d.x + 5.0f, x_axis_2d.y - 10.0f), IM_COL32(255, 0, 0, 255), "X");
