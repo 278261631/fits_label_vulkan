@@ -1,5 +1,5 @@
 #include "DemoPlugin.h"
-#include <iostream>
+#include "Logger.h"
 #include <chrono>
 
 DemoPlugin::DemoPlugin() : 
@@ -16,9 +16,9 @@ DemoPlugin::~DemoPlugin() {
 bool DemoPlugin::init(PluginContext* context) {
     m_context = context;
     
-    std::cout << "DemoPlugin initialized!" << std::endl;
-    std::cout << "This plugin demonstrates how to use the plugin system." << std::endl;
-    std::cout << "It will display FPS information in the console." << std::endl;
+    Logger::info("DemoPlugin initialized!");
+    Logger::info("This plugin demonstrates how to use the plugin system.");
+    Logger::info("It will display FPS information in the console.");
     
     return true;
 }
@@ -34,7 +34,7 @@ void DemoPlugin::update(float deltaTime) {
         m_fps = static_cast<float>(m_frameCount) / m_timeSinceLastUpdate;
         
         // 在控制台显示FPS信息
-        std::cout << "[DemoPlugin] FPS: " << m_fps << ", Frame Time: " << (m_frameTime * 1000.0f) << "ms" << std::endl;
+        Logger::info("[DemoPlugin] FPS: {}, Frame Time: {}ms", m_fps, (m_frameTime * 1000.0f));
         
         // 重置计数器
         m_frameCount = 0;
@@ -43,7 +43,7 @@ void DemoPlugin::update(float deltaTime) {
 }
 
 void DemoPlugin::cleanup() {
-    std::cout << "DemoPlugin cleaned up!" << std::endl;
+    Logger::info("DemoPlugin cleaned up!");
     m_context = nullptr;
 }
 

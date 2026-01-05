@@ -34,6 +34,9 @@ public:
     
     void setDebugMode(bool debug);
     bool isDebugMode() const;
+    
+    void setLogLevel(int level);
+    int getLogLevel() const;
 
 private:
     Config();
@@ -48,4 +51,5 @@ private:
     // 动态参数默认值
     static constexpr int DEFAULT_FPS = 60;
     static constexpr bool DEFAULT_DEBUG_MODE = true;
+    static constexpr int DEFAULT_LOG_LEVEL = 2; // 0: Trace, 1: Debug, 2: Info, 3: Warn, 4: Error, 5: Critical
 };

@@ -77,7 +77,14 @@ FetchContent_Declare(
     GIT_TAG        0.9.9.8
 )
 
-FetchContent_MakeAvailable(imgui glm)
+# 获取spdlog日志库
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.14.1
+)
+
+FetchContent_MakeAvailable(imgui glm spdlog)
 
 # ImGui Vulkan后端所需的文件
 set(IMGUI_SOURCE_FILES
@@ -95,6 +102,7 @@ set(PROJECT_SOURCE_FILES
     src/main.cpp
     src/core/Application.cpp
     src/core/Config.cpp
+    src/core/Logger.cpp
     src/core/PluginContext.cpp
     src/core/PluginManager.cpp
     src/camera/Camera.cpp
@@ -115,6 +123,7 @@ target_include_directories(demo PRIVATE
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${glm_SOURCE_DIR}
+    ${spdlog_SOURCE_DIR}/include
     src/core
     src/camera
     src/input
@@ -129,6 +138,7 @@ target_link_libraries(demo PRIVATE
     ${Vulkan_LIBRARIES}
     glfw
     glm
+    spdlog::spdlog
 )
 
 # 平台特定设置

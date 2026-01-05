@@ -1,12 +1,12 @@
 #include "UI.h"
 #include "Renderer.h"
 #include "Config.h"
+#include "Logger.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 
 UI::UI(VulkanContext* vulkanContext, Renderer* renderer, Camera* camera)
     : m_vulkanContext(vulkanContext), m_renderer(renderer), m_camera(camera),
@@ -19,18 +19,14 @@ UI::~UI() {
 bool UI::init() {
     Config& config = Config::getInstance();
     
-    if (config.isDebugMode()) {
-        std::cout << "Entering UI::init..." << std::endl;
-    }
+    Logger::debug("Entering UI::init...");
     
     try {
         initImGui();
-        if (config.isDebugMode()) {
-            std::cout << "UI::init completed successfully!" << std::endl;
-        }
+        Logger::debug("UI::init completed successfully!");
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "UI initialization error: " << e.what() << std::endl;
+        Logger::error("UI initialization error: {}", e.what());
         cleanup();
         return false;
     }
@@ -105,52 +101,37 @@ void UI::initImGui() {
 void UI::update() {
     Config& config = Config::getInstance();
     
-    if (config.isDebugMode()) {
-        std::cout << "  Entering UI::update..." << std::endl;
-    }
+    Logger::debug("  Entering UI::update...");
     
     // 开始ImGui帧 - 注意顺序：先调用GLFW后端，再调用Vulkan后端
-    if (config.isDebugMode()) {
-        std::cout << "  Calling ImGui_ImplGlfw_NewFrame..." << std::endl;
-    }
+    Logger::debug("  Calling ImGui_ImplGlfw_NewFrame...");
     ImGui_ImplGlfw_NewFrame();
-    if (config.isDebugMode()) {
-        std::cout << "  Calling ImGui_ImplVulkan_NewFrame..." << std::endl;
-    }
+    Logger::debug("  Calling ImGui_ImplVulkan_NewFrame...");
     ImGui_ImplVulkan_NewFrame();
-    if (config.isDebugMode()) {
-        std::cout << "  Calling ImGui::NewFrame..." << std::endl;
-    }
+    Logger::debug("  Calling ImGui::NewFrame...");
     ImGui::NewFrame();
     
     // 绘制坐标系和网格
-    if (config.isDebugMode()) {
-        std::cout << "  Drawing coordinate system..." << std::endl;
-    }
+    Logger::debug("  Drawing coordinate system...");
     drawCoordinateSystem();
     
     // 绘制控制面板
-    if (config.isDebugMode()) {
-        std::cout << "  Drawing control panel..." << std::endl;
-    }
+    Logger::debug("  Drawing control panel...");
     drawControlPanel();
     
     // 绘制简单的信息窗口
-    if (config.isDebugMode()) {
-        std::cout << "  Drawing simple ImGui text..." << std::endl;
-    }
+    Logger::debug("  Drawing simple ImGui text...");
     ImGui::Begin("Simple Info");
     ImGui::Text("Hello Vulkan!");
+    // 添加日志级别控制UI
+    static char logLevelStr[256] = "Info"; // 默认日志级别
+    ImGui::InputText("Log Level", logLevelStr, sizeof(logLevelStr));
     ImGui::End();
     
-    if (config.isDebugMode()) {
-        std::cout << "  Calling ImGui::Render..." << std::endl;
-    }
+    Logger::debug("  Calling ImGui::Render...");
     ImGui::Render();
     
-    if (config.isDebugMode()) {
-        std::cout << "  Exiting UI::update..." << std::endl;
-    }
+    Logger::debug("  Exiting UI::update...");
 }
 
 void UI::drawCoordinateSystem() {

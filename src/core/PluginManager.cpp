@@ -1,7 +1,7 @@
 #include "PluginManager.h"
 #include "IPlugin.h"
 #include "PluginContext.h"
-#include <iostream>
+#include "Logger.h"
 #include <algorithm>
 
 PluginManager::PluginManager() : m_context(nullptr) {
@@ -17,7 +17,7 @@ bool PluginManager::init(PluginContext* context) {
     // 初始化所有已添加的插件
     for (auto plugin : m_plugins) {
         if (!plugin->init(m_context)) {
-            std::cerr << "Failed to initialize plugin: " << plugin->getName() << std::endl;
+            Logger::error("Failed to initialize plugin: {}", plugin->getName());
             return false;
         }
     }
@@ -44,27 +44,26 @@ void PluginManager::cleanup() {
 
 bool PluginManager::addPlugin(IPlugin* plugin) {
     if (!plugin) {
-        std::cerr << "Invalid plugin pointer!" << std::endl;
+        Logger::error("Invalid plugin pointer!");
         return false;
     }
     
     // 检查插件是否已存在
     if (findPlugin(plugin->getName()) != nullptr) {
-        std::cerr << "Plugin already exists: " << plugin->getName() << std::endl;
+        Logger::error("Plugin already exists: {}", plugin->getName());
         return false;
     }
     
     // 如果已经初始化，立即初始化插件
     if (m_context) {
         if (!plugin->init(m_context)) {
-            std::cerr << "Failed to initialize plugin: " << plugin->getName() << std::endl;
+            Logger::error("Failed to initialize plugin: {}", plugin->getName());
             return false;
         }
     }
     
     m_plugins.push_back(plugin);
-    std::cout << "Plugin added: " << plugin->getName() << " (v" << plugin->getVersion() << ")" << std::endl;
-    
+    Logger::info("Plugin added: {} (v{})", plugin->getName(), plugin->getVersion());
     return true;
 }
 
@@ -77,7 +76,7 @@ bool PluginManager::removePlugin(IPlugin* plugin) {
     if (it != m_plugins.end()) {
         plugin->cleanup();
         m_plugins.erase(it);
-        std::cout << "Plugin removed: " << plugin->getName() << std::endl;
+        Logger::info("Plugin removed: {}", plugin->getName());
         return true;
     }
     

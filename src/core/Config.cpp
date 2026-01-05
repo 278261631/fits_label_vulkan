@@ -1,12 +1,13 @@
 #include "Config.h"
+#include "Logger.h"
 #include <fstream>
 #include <sstream>
-#include <iostream>
 
 Config::Config() {
     // 设置默认值
     setFPS(DEFAULT_FPS);
     setDebugMode(DEFAULT_DEBUG_MODE);
+    setLogLevel(DEFAULT_LOG_LEVEL);
 }
 
 Config::~Config() {
@@ -17,7 +18,7 @@ Config::~Config() {
 bool Config::load(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Failed to open config file: " << filename << std::endl;
+        Logger::error("Failed to open config file: {}", filename);
         return false;
     }
 
@@ -47,16 +48,14 @@ bool Config::load(const std::string& filename) {
     }
 
     file.close();
-    if (isDebugMode()) {
-        std::cout << "Config loaded from " << filename << std::endl;
-    }
+    Logger::info("Config loaded from {}", filename);
     return true;
 }
 
 bool Config::save(const std::string& filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Failed to open config file for writing: " << filename << std::endl;
+        Logger::error("Failed to open config file for writing: {}", filename);
         return false;
     }
 
@@ -66,9 +65,7 @@ bool Config::save(const std::string& filename) {
     }
 
     file.close();
-    if (isDebugMode()) {
-        std::cout << "Config saved to " << filename << std::endl;
-    }
+    Logger::info("Config saved to {}", filename);
     return true;
 }
 
@@ -147,4 +144,12 @@ void Config::setDebugMode(bool debug) {
 
 bool Config::isDebugMode() const {
     return getBool("debug_mode", DEFAULT_DEBUG_MODE);
+}
+
+void Config::setLogLevel(int level) {
+    setInt("log_level", level);
+}
+
+int Config::getLogLevel() const {
+    return getInt("log_level", DEFAULT_LOG_LEVEL);
 }

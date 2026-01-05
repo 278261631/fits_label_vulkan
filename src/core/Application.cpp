@@ -5,10 +5,10 @@
 #include "UI.h"
 #include "Camera.h"
 #include "Config.h"
+#include "Logger.h"
 #include "PluginManager.h"
 #include "PluginContext.h"
 #include "DemoPlugin.h"
-#include <iostream>
 #include <thread>
 
 Application::Application(const std::string& title, int width, int height)
@@ -29,7 +29,7 @@ bool Application::init() {
         // 初始化Vulkan上下文
         m_vulkanContext = std::make_unique<VulkanContext>(m_width, m_height, m_title.c_str());
         if (!m_vulkanContext->init()) {
-            std::cerr << "Failed to initialize Vulkan context!" << std::endl;
+            Logger::error("Failed to initialize Vulkan context!");
             return false;
         }
 
@@ -43,14 +43,14 @@ bool Application::init() {
         // 初始化渲染器，先不传递UI指针
         m_renderer = std::make_unique<Renderer>(m_vulkanContext.get(), m_camera.get(), nullptr);
         if (!m_renderer->init()) {
-            std::cerr << "Failed to initialize renderer!" << std::endl;
+            Logger::error("Failed to initialize renderer!");
             return false;
         }
         
         // 创建并初始化UI
         m_ui = std::make_unique<UI>(m_vulkanContext.get(), m_renderer.get(), m_camera.get());
         if (!m_ui->init()) {
-            std::cerr << "Failed to initialize UI!" << std::endl;
+            Logger::error("Failed to initialize UI!");
             return false;
         }
         
@@ -66,31 +66,31 @@ bool Application::init() {
         
         // 初始化插件管理器
         if (!m_pluginManager->init(m_pluginContext.get())) {
-            std::cerr << "Failed to initialize plugin manager!" << std::endl;
+            Logger::error("Failed to initialize plugin manager!");
             return false;
         }
         
         // 添加Demo插件
         auto demoPlugin = new DemoPlugin();
         if (!m_pluginManager->addPlugin(demoPlugin)) {
-            std::cerr << "Failed to add DemoPlugin!" << std::endl;
+            Logger::error("Failed to add DemoPlugin!");
             delete demoPlugin;
             return false;
         }
         
         if (config.isDebugMode()) {
-            std::cout << "=== 相机控制说明 ===" << std::endl;
-            std::cout << "- 左键 + 拖动: 旋转相机" << std::endl;
-            std::cout << "- 中键 + 拖动: 平移相机" << std::endl;
-            std::cout << "- 鼠标滚轮: 缩放" << std::endl;
-            std::cout << "- ESC: 退出程序" << std::endl;
-            std::cout << "==================" << std::endl;
+            Logger::info("=== 相机控制说明 ===");
+            Logger::info("- 左键 + 拖动: 旋转相机");
+            Logger::info("- 中键 + 拖动: 平移相机");
+            Logger::info("- 鼠标滚轮: 缩放");
+            Logger::info("- ESC: 退出程序");
+            Logger::info("==================");
         }
 
         m_running = true;
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Initialization error: " << e.what() << std::endl;
+        Logger::error("Initialization error: {}", e.what());
         return false;
     }
 }
@@ -101,40 +101,28 @@ void Application::run() {
     // 先加载配置，然后再根据配置决定是否输出日志
     config.load();
     
-    if (config.isDebugMode()) {
-        std::cout << "Entering Application::run..." << std::endl;
-    }
+    Logger::debug("Entering Application::run...");
     
     if (!init()) {
-        if (config.isDebugMode()) {
-            std::cout << "Application::init failed!" << std::endl;
-        }
+        Logger::debug("Application::init failed!");
         shutdown();
         return;
     }
     
-    if (config.isDebugMode()) {
-        std::cout << "Application::init succeeded, entering mainLoop..." << std::endl;
-    }
+    Logger::debug("Application::init succeeded, entering mainLoop...");
     
     mainLoop();
     
-    if (config.isDebugMode()) {
-        std::cout << "mainLoop exited, shutting down..." << std::endl;
-    }
+    Logger::debug("mainLoop exited, shutting down...");
     shutdown();
     
-    if (config.isDebugMode()) {
-        std::cout << "Application::run completed!" << std::endl;
-    }
+    Logger::debug("Application::run completed!");
 }
 
 void Application::mainLoop() {
     Config& config = Config::getInstance();
     
-    if (config.isDebugMode()) {
-        std::cout << "Entering mainLoop..." << std::endl;
-    }
+    Logger::debug("Entering mainLoop...");
     
     int frameCount = 0;
     
@@ -156,30 +144,22 @@ void Application::mainLoop() {
         int targetFPS = config.getFPS();
         float targetFrameTime = 1000.0f / targetFPS;
         
-        if (config.isDebugMode()) {
-            std::cout << "Frame " << frameCount++ << " - polling events..." << std::endl;
-        }
+        Logger::trace("Frame {} - polling events...", frameCount++);
         
         m_inputHandler->pollEvents();
         
-        if (config.isDebugMode()) {
-            std::cout << "Frame " << frameCount << " - updating camera..." << std::endl;
-        }
+        Logger::trace("Frame {} - updating camera...", frameCount);
         
         m_camera->update();
         
         // 更新插件
         m_pluginManager->update(deltaTime);
         
-        if (config.isDebugMode()) {
-            std::cout << "Frame " << frameCount << " - rendering and updating UI..." << std::endl;
-        }
+        Logger::trace("Frame {} - rendering and updating UI...", frameCount);
         
         m_renderer->render();
         
-        if (config.isDebugMode()) {
-            std::cout << "Frame " << frameCount << " - completed!" << std::endl;
-        }
+        Logger::trace("Frame {} - completed!", frameCount);
         
         // 更新上一帧时间
         lastFrameTime = steady_clock::now();
@@ -194,9 +174,7 @@ void Application::mainLoop() {
         }
     }
     
-    if (config.isDebugMode()) {
-        std::cout << "Exiting mainLoop..." << std::endl;
-    }
+    Logger::debug("Exiting mainLoop...");
 }
 
 void Application::shutdown() {
