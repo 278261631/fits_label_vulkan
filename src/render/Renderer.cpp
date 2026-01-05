@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "UI.h"
+#include "Config.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
@@ -67,17 +68,27 @@ void Renderer::render() {
 }
 
 void Renderer::drawFrame() {
-    std::cout << "  Entering drawFrame..." << std::endl;
+    Config& config = Config::getInstance();
+    
+    if (config.isDebugMode()) {
+        std::cout << "  Entering drawFrame..." << std::endl;
+    }
     
     VkDevice device = m_vulkanContext->getDevice();
     const std::vector<VkFence>& inFlightFences = m_vulkanContext->getInFlightFences();
     size_t currentFrame = m_vulkanContext->getCurrentFrame();
     
-    std::cout << "  Current frame: " << currentFrame << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Current frame: " << currentFrame << std::endl;
+    }
 
-    std::cout << "  Calling vkWaitForFences..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkWaitForFences..." << std::endl;
+    }
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    std::cout << "  vkWaitForFences succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkWaitForFences succeeded!" << std::endl;
+    }
 
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(
@@ -89,31 +100,47 @@ void Renderer::drawFrame() {
         &imageIndex
     );
     
-    std::cout << "  vkAcquireNextImageKHR result: " << result << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkAcquireNextImageKHR result: " << result << std::endl;
+    }
 
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
-    std::cout << "  Calling vkResetFences..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkResetFences..." << std::endl;
+    }
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
-    std::cout << "  vkResetFences succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkResetFences succeeded!" << std::endl;
+    }
     
-    std::cout << "  Calling vkResetCommandBuffer..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkResetCommandBuffer..." << std::endl;
+    }
     vkResetCommandBuffer(m_vulkanContext->getCommandBuffers()[currentFrame], 0);
-    std::cout << "  vkResetCommandBuffer succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkResetCommandBuffer succeeded!" << std::endl;
+    }
 
     // 开始录制命令缓冲区
-    std::cout << "  Calling vkBeginCommandBuffer..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkBeginCommandBuffer..." << std::endl;
+    }
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     if (vkBeginCommandBuffer(m_vulkanContext->getCommandBuffers()[currentFrame], &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("Failed to begin command buffer recording!");
     }
-    std::cout << "  vkBeginCommandBuffer succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkBeginCommandBuffer succeeded!" << std::endl;
+    }
 
     // 绑定帧缓冲区
-    std::cout << "  Binding framebuffer..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Binding framebuffer..." << std::endl;
+    }
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = m_vulkanContext->getRenderPass();
@@ -128,7 +155,9 @@ void Renderer::drawFrame() {
     vkCmdBeginRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
     // 绘制简单的坐标系
-    std::cout << "  Drawing simple coordinate system..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Drawing simple coordinate system..." << std::endl;
+    }
     
     // 注意：为了稳定运行，我们暂时只使用背景色，不做复杂的坐标绘制
     // 复杂的坐标系绘制需要完整的Vulkan管线和顶点缓冲设置
@@ -136,32 +165,48 @@ void Renderer::drawFrame() {
     
     // 检查是否有UI需要更新和渲染
     if (m_ui != nullptr) {
-        std::cout << "  Calling UI::update()..." << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "  Calling UI::update()..." << std::endl;
+        }
         m_ui->update();
         
         // 执行ImGui渲染命令 - 注意：这必须在渲染通道内进行！
-        std::cout << "  Calling ImGui_ImplVulkan_RenderDrawData..." << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "  Calling ImGui_ImplVulkan_RenderDrawData..." << std::endl;
+        }
         ImDrawData* drawData = ImGui::GetDrawData();
         if (drawData && drawData->CmdListsCount > 0) {
             ImGui_ImplVulkan_RenderDrawData(drawData, m_vulkanContext->getCommandBuffers()[currentFrame]);
         }
-        std::cout << "  ImGui_ImplVulkan_RenderDrawData succeeded!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "  ImGui_ImplVulkan_RenderDrawData succeeded!" << std::endl;
+        }
     } else {
-        std::cout << "  No UI to update, skipping..." << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "  No UI to update, skipping..." << std::endl;
+        }
     }
     
     // 结束渲染通道
-    std::cout << "  Calling vkCmdEndRenderPass..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkCmdEndRenderPass..." << std::endl;
+    }
     vkCmdEndRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame]);
     
     // 结束录制命令缓冲区
-    std::cout << "  Calling vkEndCommandBuffer..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkEndCommandBuffer..." << std::endl;
+    }
     if (vkEndCommandBuffer(m_vulkanContext->getCommandBuffers()[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("Failed to end command buffer recording!");
     }
-    std::cout << "  vkEndCommandBuffer succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkEndCommandBuffer succeeded!" << std::endl;
+    }
 
-    std::cout << "  Creating submit info..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Creating submit info..." << std::endl;
+    }
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -177,13 +222,19 @@ void Renderer::drawFrame() {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    std::cout << "  Calling vkQueueSubmit..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkQueueSubmit..." << std::endl;
+    }
     if (vkQueueSubmit(m_vulkanContext->getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("Failed to submit draw command buffer!");
     }
-    std::cout << "  vkQueueSubmit succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkQueueSubmit succeeded!" << std::endl;
+    }
 
-    std::cout << "  Creating present info..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Creating present info..." << std::endl;
+    }
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
@@ -195,19 +246,29 @@ void Renderer::drawFrame() {
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
-    std::cout << "  Calling vkQueuePresentKHR..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling vkQueuePresentKHR..." << std::endl;
+    }
     result = vkQueuePresentKHR(m_vulkanContext->getPresentQueue(), &presentInfo);
-    std::cout << "  vkQueuePresentKHR result: " << result << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  vkQueuePresentKHR result: " << result << std::endl;
+    }
 
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to present swap chain image!");
     }
 
-    std::cout << "  Calling nextFrame..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling nextFrame..." << std::endl;
+    }
     m_vulkanContext->nextFrame();
-    std::cout << "  nextFrame succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  nextFrame succeeded!" << std::endl;
+    }
     
-    std::cout << "  Exiting drawFrame..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Exiting drawFrame..." << std::endl;
+    }
 }
 
 void Renderer::drawCoordinateSystem() {

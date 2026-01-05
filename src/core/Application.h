@@ -1,12 +1,14 @@
 #pragma once
 
 #include <string>
+#include <chrono>
 
 class VulkanContext;
 class Renderer;
 class InputHandler;
 class UI;
 class Camera;
+class Config;
 
 class Application {
 public:

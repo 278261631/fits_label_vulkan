@@ -1,4 +1,5 @@
 #include "UI.h"
+#include "Config.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
@@ -247,19 +248,44 @@ void UI::drawGrid() {
 }
 
 void UI::drawControlPanel() {
+    Config& config = Config::getInstance();
+    
     // 显示控制面板
     ImGui::Begin("Control Panel", &m_showControlPanel, ImGuiWindowFlags_AlwaysAutoResize);
+    
+    // 相机控制
     ImGui::Text("Camera Controls");
     ImGui::Separator();
     ImGui::Text("Rotation X: %.3f", m_camera->getRotationX());
     ImGui::Text("Rotation Y: %.3f", m_camera->getRotationY());
     ImGui::Text("Zoom: %.3f", m_camera->getZoom());
     ImGui::Separator();
+    
+    // 配置设置
+    ImGui::Text("Configuration");
+    ImGui::Separator();
+    
+    // FPS设置
+    int fps = config.getFPS();
+    if (ImGui::SliderInt("Target FPS", &fps, 10, 240)) {
+        config.setFPS(fps);
+    }
+    
+    // Debug模式设置
+    bool debugMode = config.isDebugMode();
+    if (ImGui::Checkbox("Debug Mode", &debugMode)) {
+        config.setDebugMode(debugMode);
+    }
+    
+    ImGui::Separator();
+    
+    // 指令说明
     ImGui::Text("Instructions:");
     ImGui::Text("- Left Click + Drag: Rotate");
     ImGui::Text("- Middle Click + Drag: Pan");
     ImGui::Text("- Scroll: Zoom");
     ImGui::Text("- ESC: Exit");
+    
     ImGui::End();
 }
 
