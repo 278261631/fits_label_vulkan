@@ -1,8 +1,9 @@
 #pragma once
 
 #include "VulkanContext.h"
-#include "Renderer.h"
 #include "Camera.h"
+
+class Renderer;
 
 class UI {
 public:
