@@ -19,9 +19,8 @@ Application::~Application() {
 
 bool Application::init() {
     try {
-        // 初始化配置系统
+        // 配置系统已经在run()方法中初始化
         Config& config = Config::getInstance();
-        config.load();
         
         // 初始化Vulkan上下文
         m_vulkanContext = new VulkanContext(m_width, m_height, m_title.c_str());
@@ -72,22 +71,37 @@ bool Application::init() {
 }
 
 void Application::run() {
-    std::cout << "Entering Application::run..." << std::endl;
+    Config& config = Config::getInstance();
+    
+    // 先加载配置，然后再根据配置决定是否输出日志
+    config.load();
+    
+    if (config.isDebugMode()) {
+        std::cout << "Entering Application::run..." << std::endl;
+    }
     
     if (!init()) {
-        std::cout << "Application::init failed!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Application::init failed!" << std::endl;
+        }
         shutdown();
         return;
     }
     
-    std::cout << "Application::init succeeded, entering mainLoop..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Application::init succeeded, entering mainLoop..." << std::endl;
+    }
     
     mainLoop();
     
-    std::cout << "mainLoop exited, shutting down..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "mainLoop exited, shutting down..." << std::endl;
+    }
     shutdown();
     
-    std::cout << "Application::run completed!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Application::run completed!" << std::endl;
+    }
 }
 
 void Application::mainLoop() {

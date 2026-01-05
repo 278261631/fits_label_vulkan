@@ -17,7 +17,11 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::init() {
-    std::cout << "Entering Renderer::init..." << std::endl;
+    Config& config = Config::getInstance();
+    
+    if (config.isDebugMode()) {
+        std::cout << "Entering Renderer::init..." << std::endl;
+    }
     
     try {
         // 创建ImGui描述符池
@@ -35,7 +39,9 @@ bool Renderer::init() {
             { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
         };
 
-        std::cout << "Got descriptor pool sizes..." << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Got descriptor pool sizes..." << std::endl;
+        }
         
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -44,16 +50,22 @@ bool Renderer::init() {
         pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
         pool_info.pPoolSizes = pool_sizes;
         
-        std::cout << "Created descriptor pool create info..." << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Created descriptor pool create info..." << std::endl;
+        }
 
         VkDevice device = m_vulkanContext->getDevice();
-        std::cout << "Got device: " << device << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Got device: " << device << std::endl;
+        }
         
         if (vkCreateDescriptorPool(device, &pool_info, nullptr, &m_descriptorPool) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create descriptor pool!");
         }
         
-        std::cout << "vkCreateDescriptorPool succeeded!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "vkCreateDescriptorPool succeeded!" << std::endl;
+        }
 
         return true;
     } catch (const std::exception& e) {

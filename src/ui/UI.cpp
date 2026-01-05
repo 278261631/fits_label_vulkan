@@ -16,11 +16,17 @@ UI::~UI() {
 }
 
 bool UI::init() {
-    std::cout << "Entering UI::init..." << std::endl;
+    Config& config = Config::getInstance();
+    
+    if (config.isDebugMode()) {
+        std::cout << "Entering UI::init..." << std::endl;
+    }
     
     try {
         initImGui();
-        std::cout << "UI::init completed successfully!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "UI::init completed successfully!" << std::endl;
+        }
         return true;
     } catch (const std::exception& e) {
         std::cerr << "UI initialization error: " << e.what() << std::endl;
@@ -96,34 +102,54 @@ void UI::initImGui() {
 }
 
 void UI::update() {
-    std::cout << "  Entering UI::update..." << std::endl;
+    Config& config = Config::getInstance();
+    
+    if (config.isDebugMode()) {
+        std::cout << "  Entering UI::update..." << std::endl;
+    }
     
     // 开始ImGui帧 - 注意顺序：先调用GLFW后端，再调用Vulkan后端
-    std::cout << "  Calling ImGui_ImplGlfw_NewFrame..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling ImGui_ImplGlfw_NewFrame..." << std::endl;
+    }
     ImGui_ImplGlfw_NewFrame();
-    std::cout << "  Calling ImGui_ImplVulkan_NewFrame..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling ImGui_ImplVulkan_NewFrame..." << std::endl;
+    }
     ImGui_ImplVulkan_NewFrame();
-    std::cout << "  Calling ImGui::NewFrame..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling ImGui::NewFrame..." << std::endl;
+    }
     ImGui::NewFrame();
     
     // 绘制坐标系和网格
-    std::cout << "  Drawing coordinate system..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Drawing coordinate system..." << std::endl;
+    }
     drawCoordinateSystem();
     
     // 绘制控制面板
-    std::cout << "  Drawing control panel..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Drawing control panel..." << std::endl;
+    }
     drawControlPanel();
     
     // 绘制简单的信息窗口
-    std::cout << "  Drawing simple ImGui text..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Drawing simple ImGui text..." << std::endl;
+    }
     ImGui::Begin("Simple Info");
     ImGui::Text("Hello Vulkan!");
     ImGui::End();
     
-    std::cout << "  Calling ImGui::Render..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Calling ImGui::Render..." << std::endl;
+    }
     ImGui::Render();
     
-    std::cout << "  Exiting UI::update..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "  Exiting UI::update..." << std::endl;
+    }
 }
 
 void UI::drawCoordinateSystem() {

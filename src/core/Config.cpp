@@ -47,7 +47,9 @@ bool Config::load(const std::string& filename) {
     }
 
     file.close();
-    std::cout << "Config loaded from " << filename << std::endl;
+    if (isDebugMode()) {
+        std::cout << "Config loaded from " << filename << std::endl;
+    }
     return true;
 }
 
@@ -64,7 +66,9 @@ bool Config::save(const std::string& filename) {
     }
 
     file.close();
-    std::cout << "Config saved to " << filename << std::endl;
+    if (isDebugMode()) {
+        std::cout << "Config saved to " << filename << std::endl;
+    }
     return true;
 }
 

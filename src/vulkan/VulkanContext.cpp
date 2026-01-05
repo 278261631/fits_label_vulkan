@@ -1,4 +1,5 @@
 #include "VulkanContext.h"
+#include "Config.h"
 #include <stdexcept>
 #include <iostream>
 #include <vector>
@@ -87,36 +88,56 @@ bool VulkanContext::initWindow() {
 }
 
 bool VulkanContext::initVulkan() {
+    Config& config = Config::getInstance();
+    
     try {
         createInstance();
         createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
-        std::cout << "Completed createLogicalDevice!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createLogicalDevice!" << std::endl;
+        }
         
         createSwapchain();
-        std::cout << "Completed createSwapchain!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createSwapchain!" << std::endl;
+        }
         
         createImageViews();
-        std::cout << "Completed createImageViews!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createImageViews!" << std::endl;
+        }
         
         createRenderPass();
-        std::cout << "Completed createRenderPass!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createRenderPass!" << std::endl;
+        }
         
         createGraphicsPipeline();
-        std::cout << "Completed createGraphicsPipeline!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createGraphicsPipeline!" << std::endl;
+        }
         
         createFramebuffers();
-        std::cout << "Completed createFramebuffers!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createFramebuffers!" << std::endl;
+        }
         
         createCommandPool();
-        std::cout << "Completed createCommandPool!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createCommandPool!" << std::endl;
+        }
         
         createCommandBuffers();
-        std::cout << "Completed createCommandBuffers!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createCommandBuffers!" << std::endl;
+        }
         
         createSyncObjects();
-        std::cout << "Completed createSyncObjects!" << std::endl;
+        if (config.isDebugMode()) {
+            std::cout << "Completed createSyncObjects!" << std::endl;
+        }
         
         return true;
     } catch (const std::exception& e) {
@@ -157,6 +178,8 @@ void VulkanContext::createSurface() {
 }
 
 void VulkanContext::pickPhysicalDevice() {
+    Config& config = Config::getInstance();
+    
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
 
@@ -174,9 +197,11 @@ void VulkanContext::pickPhysicalDevice() {
             m_physicalDevice = device;
             
             // 打印设备名称
-            VkPhysicalDeviceProperties deviceProps;
-            vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProps);
-            std::cout << "Selected GPU: " << deviceProps.deviceName << std::endl;
+            if (config.isDebugMode()) {
+                VkPhysicalDeviceProperties deviceProps;
+                vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProps);
+                std::cout << "Selected GPU: " << deviceProps.deviceName << std::endl;
+            }
             return;
         }
     }
@@ -185,11 +210,17 @@ void VulkanContext::pickPhysicalDevice() {
 }
 
 void VulkanContext::createLogicalDevice() {
-    std::cout << "Entering createLogicalDevice..." << std::endl;
+    Config& config = Config::getInstance();
+    
+    if (config.isDebugMode()) {
+        std::cout << "Entering createLogicalDevice..." << std::endl;
+    }
     
     QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice, m_surface);
     
-    std::cout << "Got queue family indices..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Got queue family indices..." << std::endl;
+    }
 
     // 检查队列族是否存在
     if (!indices.graphicsFamily.has_value() || !indices.presentFamily.has_value()) {
@@ -202,8 +233,10 @@ void VulkanContext::createLogicalDevice() {
     uint32_t graphicsFamily = indices.graphicsFamily.value();
     uint32_t presentFamily = indices.presentFamily.value();
     
-    std::cout << "Graphics family index: " << graphicsFamily << std::endl;
-    std::cout << "Present family index: " << presentFamily << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Graphics family index: " << graphicsFamily << std::endl;
+        std::cout << "Present family index: " << presentFamily << std::endl;
+    }
     
     float queuePriority = 1.0f;
     
@@ -225,7 +258,9 @@ void VulkanContext::createLogicalDevice() {
         queueCreateInfos.push_back(presentQueueInfo);
     }
     
-    std::cout << "Created queue create infos, size: " << queueCreateInfos.size() << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Created queue create infos, size: " << queueCreateInfos.size() << std::endl;
+    }
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 
@@ -243,20 +278,30 @@ void VulkanContext::createLogicalDevice() {
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     createInfo.enabledLayerCount = 0;
     
-    std::cout << "Calling vkCreateDevice..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Calling vkCreateDevice..." << std::endl;
+    }
 
     if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create logical device!");
     }
     
-    std::cout << "vkCreateDevice succeeded!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "vkCreateDevice succeeded!" << std::endl;
+    }
 
-    std::cout << "Calling vkGetDeviceQueue for graphics queue..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Calling vkGetDeviceQueue for graphics queue..." << std::endl;
+    }
     vkGetDeviceQueue(m_device, graphicsFamily, 0, &m_graphicsQueue);
-    std::cout << "Calling vkGetDeviceQueue for present queue..." << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "Calling vkGetDeviceQueue for present queue..." << std::endl;
+    }
     vkGetDeviceQueue(m_device, presentFamily, 0, &m_presentQueue);
     
-    std::cout << "createLogicalDevice completed successfully!" << std::endl;
+    if (config.isDebugMode()) {
+        std::cout << "createLogicalDevice completed successfully!" << std::endl;
+    }
 }
 
 void VulkanContext::createSwapchain() {
