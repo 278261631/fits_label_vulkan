@@ -14,6 +14,9 @@ public:
     void render();
     void cleanup();
     
+    // Setters
+    void setUI(UI* ui) { m_ui = ui; }
+    
     // Getters
     VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
 

@@ -127,18 +127,19 @@ void Renderer::drawFrame() {
     
     vkCmdBeginRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
-    // 注意：UI渲染会在结束渲染通道后进行，所以这里不调用drawCoordinateSystem和drawGrid
+    // 绘制简单的坐标系
+    std::cout << "  Drawing simple coordinate system..." << std::endl;
     
-    // 结束渲染通道
-    std::cout << "  Calling vkCmdEndRenderPass..." << std::endl;
-    vkCmdEndRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    // 注意：为了稳定运行，我们暂时只使用背景色，不做复杂的坐标绘制
+    // 复杂的坐标系绘制需要完整的Vulkan管线和顶点缓冲设置
+    // 后续可以添加完整的坐标系绘制功能，但需要更复杂的实现
     
     // 检查是否有UI需要更新和渲染
     if (m_ui != nullptr) {
         std::cout << "  Calling UI::update()..." << std::endl;
         m_ui->update();
         
-        // 执行ImGui渲染命令
+        // 执行ImGui渲染命令 - 注意：这必须在渲染通道内进行！
         std::cout << "  Calling ImGui_ImplVulkan_RenderDrawData..." << std::endl;
         ImDrawData* drawData = ImGui::GetDrawData();
         if (drawData && drawData->CmdListsCount > 0) {
@@ -148,6 +149,10 @@ void Renderer::drawFrame() {
     } else {
         std::cout << "  No UI to update, skipping..." << std::endl;
     }
+    
+    // 结束渲染通道
+    std::cout << "  Calling vkCmdEndRenderPass..." << std::endl;
+    vkCmdEndRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame]);
     
     // 结束录制命令缓冲区
     std::cout << "  Calling vkEndCommandBuffer..." << std::endl;

@@ -31,15 +31,29 @@ bool Application::init() {
         m_inputHandler = new InputHandler(m_vulkanContext->getWindow(), m_camera);
         m_inputHandler->init();
 
-        // 初始化渲染器（暂时不使用UI）
+        // 初始化渲染器，先不传递UI指针
         m_renderer = new Renderer(m_vulkanContext, m_camera, nullptr);
         if (!m_renderer->init()) {
             std::cerr << "Failed to initialize renderer!" << std::endl;
             return false;
         }
-
-        // 暂时不初始化UI，先确保核心渲染正常工作
-        m_ui = nullptr;
+        
+        // 创建并初始化UI
+        m_ui = new UI(m_vulkanContext, m_renderer, m_camera);
+        if (!m_ui->init()) {
+            std::cerr << "Failed to initialize UI!" << std::endl;
+            return false;
+        }
+        
+        // 设置渲染器的UI指针
+        m_renderer->setUI(m_ui);
+        
+        std::cout << "=== 相机控制说明 ===" << std::endl;
+        std::cout << "- 左键 + 拖动: 旋转相机" << std::endl;
+        std::cout << "- 中键 + 拖动: 平移相机" << std::endl;
+        std::cout << "- 鼠标滚轮: 缩放" << std::endl;
+        std::cout << "- ESC: 退出程序" << std::endl;
+        std::cout << "==================" << std::endl;
 
         m_running = true;
         return true;

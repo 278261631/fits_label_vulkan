@@ -105,28 +105,22 @@ void UI::update() {
     std::cout << "  Calling ImGui::NewFrame..." << std::endl;
     ImGui::NewFrame();
     
-    // 绘制简单的控制面板，只显示文本信息
-    std::cout << "  Calling ImGui::Begin() for simple control panel..." << std::endl;
-    ImGui::Begin("Control Panel");
-    ImGui::Text("Camera Parameters");
-    ImGui::Separator();
-    ImGui::Text("Rotation X: %.3f", m_camera->getRotationX());
-    ImGui::Text("Rotation Y: %.3f", m_camera->getRotationY());
-    ImGui::Text("Zoom: %.3f", m_camera->getZoom());
-    ImGui::Separator();
-    ImGui::Text("Instructions:");
-    ImGui::Text("- Left Click + Drag: Rotate");
-    ImGui::Text("- Middle Click + Drag: Pan");
-    ImGui::Text("- Scroll: Zoom");
-    ImGui::Text("- ESC: Exit");
+    // 绘制坐标系和网格
+    std::cout << "  Drawing coordinate system..." << std::endl;
+    drawCoordinateSystem();
+    
+    // 绘制控制面板
+    std::cout << "  Drawing control panel..." << std::endl;
+    drawControlPanel();
+    
+    // 绘制简单的信息窗口
+    std::cout << "  Drawing simple ImGui text..." << std::endl;
+    ImGui::Begin("Simple Info");
+    ImGui::Text("Hello Vulkan!");
     ImGui::End();
-    std::cout << "  ImGui::End() completed..." << std::endl;
     
     std::cout << "  Calling ImGui::Render..." << std::endl;
     ImGui::Render();
-    
-    // ImGui_ImplVulkan_RenderDrawData将在Renderer::drawFrame()中调用，因为它需要在命令缓冲区录制期间执行
-    // 这里只需要完成ImGui的渲染准备，实际渲染将由Renderer处理
     
     std::cout << "  Exiting UI::update..." << std::endl;
 }
