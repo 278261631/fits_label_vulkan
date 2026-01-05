@@ -212,6 +212,132 @@ void UI::drawCoordinateSystem() {
     draw_list->AddText(ImVec2(x_axis_2d.x + 5.0f, x_axis_2d.y - 10.0f), IM_COL32(255, 0, 0, 255), "X");
     draw_list->AddText(ImVec2(y_axis_2d.x + 5.0f, y_axis_2d.y - 10.0f), IM_COL32(0, 255, 0, 255), "Y");
     draw_list->AddText(ImVec2(z_axis_2d.x + 5.0f, z_axis_2d.y + 5.0f), IM_COL32(0, 0, 255, 255), "Z");
+    
+    // 根据缩放值决定刻度显示参数
+    float zoom = m_camera->getZoom();
+    int numTicks = 5; // 默认刻度数量
+    float tickStep;   // 刻度间距
+    const char* formatStr; // 刻度值格式
+    
+    if (zoom < 0.5f) {
+        numTicks = 10;
+        tickStep = base_axis_length / numTicks;
+        formatStr = "%.1f";
+    } else if (zoom < 2.0f) {
+        numTicks = 5;
+        tickStep = base_axis_length / numTicks;
+        formatStr = "%.1f";
+    } else {
+        numTicks = 5;
+        tickStep = base_axis_length / numTicks;
+        formatStr = "%.0f";
+    }
+    
+    // 计算单位方向向量
+    ImVec2 dirX = ImVec2(x_axis_2d.x - origin_2d.x, x_axis_2d.y - origin_2d.y);
+    float lengthX = sqrtf(dirX.x * dirX.x + dirX.y * dirX.y);
+    ImVec2 unitDirX = ImVec2(dirX.x / lengthX, dirX.y / lengthX);
+    ImVec2 perpDirX = ImVec2(-unitDirX.y, unitDirX.x);
+    
+    ImVec2 dirY = ImVec2(y_axis_2d.x - origin_2d.x, y_axis_2d.y - origin_2d.y);
+    float lengthY = sqrtf(dirY.x * dirY.x + dirY.y * dirY.y);
+    ImVec2 unitDirY = ImVec2(dirY.x / lengthY, dirY.y / lengthY);
+    ImVec2 perpDirY = ImVec2(-unitDirY.y, unitDirY.x);
+    
+    ImVec2 dirZ = ImVec2(z_axis_2d.x - origin_2d.x, z_axis_2d.y - origin_2d.y);
+    float lengthZ = sqrtf(dirZ.x * dirZ.x + dirZ.y * dirZ.y);
+    ImVec2 unitDirZ = ImVec2(dirZ.x / lengthZ, dirZ.y / lengthZ);
+    ImVec2 perpDirZ = ImVec2(-unitDirZ.y, unitDirZ.x);
+    
+    float tickLength = 5.0f;
+    float textOffset = 2.0f;
+    
+    // 绘制X轴刻度
+    for (int i = 1; i <= numTicks; i++) {
+        float tickValue = i * tickStep;
+        ImVec2 tickPos = ImVec2(
+            origin_2d.x + unitDirX.x * (lengthX * i / numTicks),
+            origin_2d.y + unitDirX.y * (lengthX * i / numTicks)
+        );
+        
+        // 绘制刻度线
+        ImVec2 tickStart = ImVec2(
+            tickPos.x + perpDirX.x * tickLength,
+            tickPos.y + perpDirX.y * tickLength
+        );
+        ImVec2 tickEnd = ImVec2(
+            tickPos.x - perpDirX.x * tickLength,
+            tickPos.y - perpDirX.y * tickLength
+        );
+        draw_list->AddLine(tickStart, tickEnd, IM_COL32(255, 0, 0, 200), axis_thickness);
+        
+        // 绘制刻度值
+        char tickStr[32];
+        snprintf(tickStr, sizeof(tickStr), formatStr, tickValue);
+        ImVec2 textPos = ImVec2(
+            tickPos.x + perpDirX.x * (tickLength + textOffset),
+            tickPos.y + perpDirX.y * (tickLength + textOffset)
+        );
+        draw_list->AddText(textPos, IM_COL32(255, 255, 255, 255), tickStr);
+    }
+    
+    // 绘制Y轴刻度
+    for (int i = 1; i <= numTicks; i++) {
+        float tickValue = i * tickStep;
+        ImVec2 tickPos = ImVec2(
+            origin_2d.x + unitDirY.x * (lengthY * i / numTicks),
+            origin_2d.y + unitDirY.y * (lengthY * i / numTicks)
+        );
+        
+        // 绘制刻度线
+        ImVec2 tickStart = ImVec2(
+            tickPos.x + perpDirY.x * tickLength,
+            tickPos.y + perpDirY.y * tickLength
+        );
+        ImVec2 tickEnd = ImVec2(
+            tickPos.x - perpDirY.x * tickLength,
+            tickPos.y - perpDirY.y * tickLength
+        );
+        draw_list->AddLine(tickStart, tickEnd, IM_COL32(0, 255, 0, 200), axis_thickness);
+        
+        // 绘制刻度值
+        char tickStr[32];
+        snprintf(tickStr, sizeof(tickStr), formatStr, tickValue);
+        ImVec2 textPos = ImVec2(
+            tickPos.x + perpDirY.x * (tickLength + textOffset),
+            tickPos.y + perpDirY.y * (tickLength + textOffset)
+        );
+        draw_list->AddText(textPos, IM_COL32(255, 255, 255, 255), tickStr);
+    }
+    
+    // 绘制Z轴刻度
+    for (int i = 1; i <= numTicks; i++) {
+        float tickValue = i * tickStep;
+        ImVec2 tickPos = ImVec2(
+            origin_2d.x + unitDirZ.x * (lengthZ * i / numTicks),
+            origin_2d.y + unitDirZ.y * (lengthZ * i / numTicks)
+        );
+        
+        // 绘制刻度线
+        ImVec2 tickStart = ImVec2(
+            tickPos.x + perpDirZ.x * tickLength,
+            tickPos.y + perpDirZ.y * tickLength
+        );
+        ImVec2 tickEnd = ImVec2(
+            tickPos.x - perpDirZ.x * tickLength,
+            tickPos.y - perpDirZ.y * tickLength
+        );
+        draw_list->AddLine(tickStart, tickEnd, IM_COL32(0, 0, 255, 200), axis_thickness);
+        
+        // 绘制刻度值
+        char tickStr[32];
+        snprintf(tickStr, sizeof(tickStr), formatStr, tickValue);
+        ImVec2 textPos = ImVec2(
+            tickPos.x + perpDirZ.x * (tickLength + textOffset),
+            tickPos.y + perpDirZ.y * (tickLength + textOffset)
+        );
+        draw_list->AddText(textPos, IM_COL32(255, 255, 255, 255), tickStr);
+    }
 
     ImGui::End();
 }
