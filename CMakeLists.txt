@@ -94,11 +94,15 @@ set(IMGUI_SOURCE_FILES
 set(PROJECT_SOURCE_FILES
     src/main.cpp
     src/core/Application.cpp
+    src/core/Config.cpp
+    src/core/PluginContext.cpp
+    src/core/PluginManager.cpp
     src/camera/Camera.cpp
     src/input/InputHandler.cpp
     src/render/Renderer.cpp
     src/vulkan/VulkanContext.cpp
     src/ui/UI.cpp
+    src/plugins/DemoPlugin.cpp
 )
 
 # 创建可执行文件
@@ -117,6 +121,7 @@ target_include_directories(demo PRIVATE
     src/render
     src/vulkan
     src/ui
+    src/plugins
 )
 
 # 链接库

@@ -5,13 +5,17 @@
 #include "UI.h"
 #include "Camera.h"
 #include "Config.h"
+#include "PluginManager.h"
+#include "PluginContext.h"
+#include "DemoPlugin.h"
 #include <iostream>
 #include <thread>
 
 Application::Application(const std::string& title, int width, int height)
     : m_title(title), m_width(width), m_height(height), m_running(false),
       m_vulkanContext(nullptr), m_renderer(nullptr), m_inputHandler(nullptr),
-      m_ui(nullptr), m_camera(nullptr) {}
+      m_ui(nullptr), m_camera(nullptr),
+      m_pluginContext(nullptr), m_pluginManager(std::make_unique<PluginManager>()) {}
 
 Application::~Application() {
     shutdown();
@@ -23,35 +27,56 @@ bool Application::init() {
         Config& config = Config::getInstance();
         
         // 初始化Vulkan上下文
-        m_vulkanContext = new VulkanContext(m_width, m_height, m_title.c_str());
+        m_vulkanContext = std::make_unique<VulkanContext>(m_width, m_height, m_title.c_str());
         if (!m_vulkanContext->init()) {
             std::cerr << "Failed to initialize Vulkan context!" << std::endl;
             return false;
         }
 
         // 创建相机
-        m_camera = new Camera(m_width, m_height);
+        m_camera = std::make_unique<Camera>(m_width, m_height);
 
         // 初始化输入处理
-        m_inputHandler = new InputHandler(m_vulkanContext->getWindow(), m_camera);
+        m_inputHandler = std::make_unique<InputHandler>(m_vulkanContext->getWindow(), m_camera.get());
         m_inputHandler->init();
 
         // 初始化渲染器，先不传递UI指针
-        m_renderer = new Renderer(m_vulkanContext, m_camera, nullptr);
+        m_renderer = std::make_unique<Renderer>(m_vulkanContext.get(), m_camera.get(), nullptr);
         if (!m_renderer->init()) {
             std::cerr << "Failed to initialize renderer!" << std::endl;
             return false;
         }
         
         // 创建并初始化UI
-        m_ui = new UI(m_vulkanContext, m_renderer, m_camera);
+        m_ui = std::make_unique<UI>(m_vulkanContext.get(), m_renderer.get(), m_camera.get());
         if (!m_ui->init()) {
             std::cerr << "Failed to initialize UI!" << std::endl;
             return false;
         }
         
         // 设置渲染器的UI指针
-        m_renderer->setUI(m_ui);
+        m_renderer->setUI(m_ui.get());
+        
+        // 初始化插件系统
+        m_pluginContext = std::make_unique<PluginContext>(
+            m_vulkanContext.get(),
+            m_renderer.get(),
+            m_camera.get()
+        );
+        
+        // 初始化插件管理器
+        if (!m_pluginManager->init(m_pluginContext.get())) {
+            std::cerr << "Failed to initialize plugin manager!" << std::endl;
+            return false;
+        }
+        
+        // 添加Demo插件
+        auto demoPlugin = new DemoPlugin();
+        if (!m_pluginManager->addPlugin(demoPlugin)) {
+            std::cerr << "Failed to add DemoPlugin!" << std::endl;
+            delete demoPlugin;
+            return false;
+        }
         
         if (config.isDebugMode()) {
             std::cout << "=== 相机控制说明 ===" << std::endl;
@@ -124,6 +149,9 @@ void Application::mainLoop() {
         // 计算上一帧耗时（毫秒）
         duration<float, std::milli> frameDuration = currentFrameTime - lastFrameTime;
         
+        // 计算deltaTime（秒）
+        float deltaTime = frameDuration.count() / 1000.0f;
+        
         // 计算目标帧时间（毫秒）
         int targetFPS = config.getFPS();
         float targetFrameTime = 1000.0f / targetFPS;
@@ -139,6 +167,9 @@ void Application::mainLoop() {
         }
         
         m_camera->update();
+        
+        // 更新插件
+        m_pluginManager->update(deltaTime);
         
         if (config.isDebugMode()) {
             std::cout << "Frame " << frameCount << " - rendering and updating UI..." << std::endl;
@@ -169,30 +200,6 @@ void Application::mainLoop() {
 }
 
 void Application::shutdown() {
-    if (m_ui) {
-        delete m_ui;
-        m_ui = nullptr;
-    }
-
-    if (m_renderer) {
-        delete m_renderer;
-        m_renderer = nullptr;
-    }
-
-    if (m_inputHandler) {
-        delete m_inputHandler;
-        m_inputHandler = nullptr;
-    }
-
-    if (m_camera) {
-        delete m_camera;
-        m_camera = nullptr;
-    }
-
-    if (m_vulkanContext) {
-        delete m_vulkanContext;
-        m_vulkanContext = nullptr;
-    }
-
+    // 智能指针会自动释放内存，无需手动delete
     m_running = false;
 }
