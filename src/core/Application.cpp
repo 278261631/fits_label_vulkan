@@ -70,6 +70,9 @@ bool Application::init() {
             return false;
         }
         
+        // 加载外部插件
+        m_pluginManager->loadPluginsFromDirectory("./plugins");
+        
         // 添加Demo插件
         auto demoPlugin = new DemoPlugin();
         if (!m_pluginManager->addPlugin(demoPlugin)) {
