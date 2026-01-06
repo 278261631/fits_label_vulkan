@@ -108,6 +108,8 @@ set(PROJECT_SOURCE_FILES
     src/camera/Camera.cpp
     src/input/InputHandler.cpp
     src/render/Renderer.cpp
+    src/render/CoordinateSystemRenderer.cpp
+    src/render/DemoObjectRenderer.cpp
     src/vulkan/VulkanContext.cpp
     src/ui/UI.cpp
     src/plugins/DemoPlugin.cpp

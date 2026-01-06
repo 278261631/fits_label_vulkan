@@ -1,5 +1,7 @@
 #include "Renderer.h"
 #include "UI.h"
+#include "CoordinateSystemRenderer.h"
+#include "DemoObjectRenderer.h"
 #include "Config.h"
 #include "Logger.h"
 #include <imgui.h>
@@ -47,7 +49,7 @@ bool Renderer::init() {
         pool_info.pPoolSizes = pool_sizes;
         
         Logger::debug("Created descriptor pool create info...");
-
+        
         VkDevice device = m_vulkanContext->getDevice();
         Logger::debug("Got device: {:p}", static_cast<void*>(device));
         
@@ -57,7 +59,23 @@ bool Renderer::init() {
         
         Logger::debug("vkCreateDescriptorPool succeeded!");
 
-        return true;
+        // 初始化坐标系渲染器
+        m_coordinateRenderer = std::make_unique<CoordinateSystemRenderer>(m_vulkanContext, m_camera);
+        if (!m_coordinateRenderer->init()) {
+            Logger::error("Failed to initialize coordinate system renderer!");
+            cleanup();
+            return false;
+        }
+        
+        // 初始化演示物体渲染器
+        m_demoObjectRenderer = std::make_unique<DemoObjectRenderer>(m_vulkanContext, m_camera);
+        if (!m_demoObjectRenderer->init()) {
+            Logger::error("Failed to initialize demo object renderer!");
+            cleanup();
+            return false;
+        }
+    
+    return true;
     } catch (const std::exception& e) {
         Logger::error("Renderer initialization error: {}", e.what());
         cleanup();
@@ -132,12 +150,17 @@ void Renderer::drawFrame() {
     
     vkCmdBeginRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
-    // 绘制简单的坐标系
-    Logger::debug("  Drawing simple coordinate system...");
+    // 绘制演示物体
+    Logger::debug("  Drawing demo object...");
+    if (m_demoObjectRenderer) {
+        m_demoObjectRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    }
     
-    // 注意：为了稳定运行，我们暂时只使用背景色，不做复杂的坐标绘制
-    // 复杂的坐标系绘制需要完整的Vulkan管线和顶点缓冲设置
-    // 后续可以添加完整的坐标系绘制功能，但需要更复杂的实现
+    // 绘制坐标系
+    Logger::debug("  Drawing coordinate system...");
+    if (m_coordinateRenderer) {
+        m_coordinateRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    }
     
     // 检查是否有UI需要更新和渲染
     if (m_ui != nullptr) {
@@ -224,6 +247,18 @@ void Renderer::drawGrid() {
 }
 
 void Renderer::cleanup() {
+    // 清理坐标系渲染器
+    if (m_coordinateRenderer) {
+        m_coordinateRenderer->cleanup();
+        m_coordinateRenderer.reset();
+    }
+    
+    // 清理演示物体渲染器
+    if (m_demoObjectRenderer) {
+        m_demoObjectRenderer->cleanup();
+        m_demoObjectRenderer.reset();
+    }
+    
     if (m_descriptorPool != VK_NULL_HANDLE) {
         vkDestroyDescriptorPool(m_vulkanContext->getDevice(), m_descriptorPool, nullptr);
         m_descriptorPool = VK_NULL_HANDLE;

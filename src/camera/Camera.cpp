@@ -1,12 +1,14 @@
 #include "Camera.h"
+#include "Logger.h"
 
 Camera::Camera(int width, int height)
     : m_width(width), m_height(height),
       m_rotationX(0.0f), m_rotationY(0.0f), m_zoom(1.0f),
       m_position(0.0f, 0.0f, 5.0f),
+      m_centerPoint(0.0f, 0.0f, 0.0f),  // 默认观察中心点为原点
       m_rotationSensitivity(0.01f),
-      m_panSensitivity(0.5f),
-      m_zoomSensitivity(0.1f) {
+    m_panSensitivity(0.5f),
+    m_zoomSensitivity(1.0f) {
 
     recalculateMatrices();
 }
@@ -16,8 +18,9 @@ void Camera::update() {
 }
 
 void Camera::rotate(float deltaX, float deltaY) {
-    // 计算当前相机到原点的距离
-    float distance = glm::length(m_position);
+    // 计算当前相机到中心点的相对距离
+    glm::vec3 relativePos = m_position - m_centerPoint;
+    float distance = glm::length(relativePos);
     
     // 更新旋转角度
     m_rotationY += deltaX * m_rotationSensitivity;
@@ -27,34 +30,106 @@ void Camera::rotate(float deltaX, float deltaY) {
     if (m_rotationX > 3.14f) m_rotationX = 3.14f;
     if (m_rotationX < -3.14f) m_rotationX = -3.14f;
     
-    // 根据旋转角度和距离重新计算相机位置
+    // 根据旋转角度和距离重新计算相机相对位置
     float x = sin(m_rotationY) * sin(m_rotationX) * distance;
     float y = cos(m_rotationX) * distance;
     float z = cos(m_rotationY) * sin(m_rotationX) * distance;
     
-    m_position = glm::vec3(x, y, z);
+    // 更新相机位置，保持相对于中心点的位置
+    m_position = m_centerPoint + glm::vec3(x, y, z);
 }
 
 void Camera::pan(float deltaX, float deltaY) {
+    // 平移操作应该移动中心点，而不是相机位置
+    m_centerPoint.x += deltaX * m_panSensitivity;
+    m_centerPoint.y += deltaY * m_panSensitivity;
+    
+    // 相机位置也相应更新，保持相对位置不变
     m_position.x += deltaX * m_panSensitivity;
     m_position.y += deltaY * m_panSensitivity;
 }
 
 void Camera::zoom(float delta) {
-    // 计算相机到原点的方向
-    glm::vec3 direction = glm::normalize(m_position);
+    // 计算相机到中心点的方向
+    glm::vec3 relativePos = m_position - m_centerPoint;
+    glm::vec3 direction = glm::normalize(relativePos);
     
-    // 沿方向向量移动相机
+    // 沿方向向量移动相机（注意方向：delta为正应该放大，即相机靠近中心点）
     float zoomAmount = delta * m_zoomSensitivity * 0.5f;
-    m_position += direction * zoomAmount;
+    m_position -= direction * zoomAmount;
     
-    // 限制相机与原点的距离
-    float distance = glm::length(m_position);
-    if (distance < 1.0f) {
-        m_position = direction * 1.0f;
-    } else if (distance > 10.0f) {
-        m_position = direction * 10.0f;
+    // 计算当前距离，无限制
+    float distance = glm::length(m_position - m_centerPoint);
+    
+    // 更新zoom变量，用于正交投影矩阵
+    m_zoom = 1.0f / distance;
+}
+
+void Camera::setCenterPoint(const glm::vec3& center) {
+    // 当设置新的中心点时，保持相机相对于中心点的位置
+    glm::vec3 relativePos = m_position - m_centerPoint;  // 保存当前相对位置
+    m_centerPoint = center;
+    m_position = m_centerPoint + relativePos;  // 更新相机位置
+}
+
+void Camera::moveCenterPoint(const glm::vec3& offset) {
+    // 移动中心点，并相应地移动相机位置
+    m_centerPoint += offset;
+    m_position += offset;
+}
+
+void Camera::setView(const std::string& view) {
+    // 重置旋转角度
+    m_rotationX = 0.0f;
+    m_rotationY = 0.0f;
+    
+    // 设置相机距离（缩放）
+    float distance = 5.0f; // 默认距离
+    
+    // 根据视图类型设置相机位置
+    if (view == "Front") {
+        // 前视图：从Z正方向看
+        m_position = m_centerPoint + glm::vec3(0.0f, 0.0f, distance);
+        m_rotationX = 0.0f;
+        m_rotationY = 0.0f;
+    } else if (view == "Back") {
+        // 后视图：从Z负方向看
+        m_position = m_centerPoint + glm::vec3(0.0f, 0.0f, -distance);
+        m_rotationX = 0.0f;
+        m_rotationY = 3.14159f; // 180度
+    } else if (view == "Left") {
+        // 左视图：从X负方向看
+        m_position = m_centerPoint + glm::vec3(-distance, 0.0f, 0.0f);
+        m_rotationX = 0.0f;
+        m_rotationY = -3.14159f / 2.0f; // -90度
+    } else if (view == "Right") {
+        // 右视图：从X正方向看
+        m_position = m_centerPoint + glm::vec3(distance, 0.0f, 0.0f);
+        m_rotationX = 0.0f;
+        m_rotationY = 3.14159f / 2.0f; // 90度
+    } else if (view == "Top") {
+        // 顶视图：从Y正方向看
+        m_position = m_centerPoint + glm::vec3(0.0f, distance, 0.0f);
+        m_rotationX = -3.14159f / 2.0f; // -90度
+        m_rotationY = 0.0f;
+    } else if (view == "Bottom") {
+        // 底视图：从Y负方向看
+        m_position = m_centerPoint + glm::vec3(0.0f, -distance, 0.0f);
+        m_rotationX = 3.14159f / 2.0f; // 90度
+        m_rotationY = 0.0f;
+    } else if (view == "Perspective" || view == "Home") {
+        // 透视视图（默认视图）
+        m_rotationX = 0.2f; // 小角度俯视
+        m_rotationY = 0.5f; // 小角度侧视
+        // 计算基于旋转角度的位置
+        float x = sin(m_rotationY) * sin(m_rotationX) * distance;
+        float y = cos(m_rotationX) * distance;
+        float z = cos(m_rotationY) * sin(m_rotationX) * distance;
+        m_position = m_centerPoint + glm::vec3(x, y, z);
     }
+    
+    // 更新缩放值
+    m_zoom = 1.0f / distance;
 }
 
 void Camera::recalculateMatrices() {
@@ -63,14 +138,10 @@ void Camera::recalculateMatrices() {
     float size = 100.0f * m_zoom;
     m_projectionMatrix = glm::ortho(-size * aspectRatio, size * aspectRatio, -size, size, -1000.0f, 1000.0f);
 
-    // 视图矩阵：使用正确的坐标系设置，z轴向上
-    // 1. 平移：将相机移动到观察位置
-    glm::mat4 translation = glm::translate(glm::mat4(1.0f), -m_position);
+    // 视图矩阵：使用正确的坐标系设置，使相机始终看向中心点
+    glm::mat4 lookAt = glm::lookAt(m_position, m_centerPoint, glm::vec3(0.0f, 1.0f, 0.0f));
     
-    // 2. 计算旋转矩阵，使相机始终看向原点
-    glm::mat4 lookAt = glm::lookAt(m_position, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    
-    // 3. 使用lookAt矩阵作为视图矩阵
+    // 使用lookAt矩阵作为视图矩阵
     m_viewMatrix = lookAt;
 
     // 计算视图投影矩阵

@@ -1,6 +1,6 @@
 #include "InputHandler.h"
 #include "Camera.h"
-#include <iostream>
+#include "Logger.h"
 
 // 静态实例初始化
 InputHandler* InputHandler::s_instance = nullptr;
@@ -77,10 +77,31 @@ void InputHandler::keyCallback(GLFWwindow* window, int key, int scancode, int ac
     }
 
     // 添加更多键盘快捷键
-    if (s_instance) {
-        if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+    if (s_instance && action == GLFW_PRESS) {
+        if (key == GLFW_KEY_R) {
             // 重置相机
-            // 这里可以添加相机重置逻辑
+            s_instance->m_camera->setView("Home");
+        } else if (key == GLFW_KEY_F) {
+            // Focus on object (for now, just center on origin)
+            s_instance->m_camera->setCenterPoint(glm::vec3(0.0f, 0.0f, 0.0f));
+        } else if (key == GLFW_KEY_H) {
+            // Home view
+            s_instance->m_camera->setView("Home");
+        } else if (key == GLFW_KEY_T) {
+            // Top view
+            s_instance->m_camera->setView("Top");
+        } else if (key == GLFW_KEY_B) {
+            // Bottom view
+            s_instance->m_camera->setView("Bottom");
+        } else if (key == GLFW_KEY_L) {
+            // Left view
+            s_instance->m_camera->setView("Left");
+        } else if (key == GLFW_KEY_R && mods == GLFW_MOD_CONTROL) {
+            // Right view (using Ctrl+R to avoid conflict with reset)
+            s_instance->m_camera->setView("Right");
+        } else if (key == GLFW_KEY_P) {
+            // Perspective view
+            s_instance->m_camera->setView("Perspective");
         }
     }
 }

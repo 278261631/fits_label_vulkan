@@ -1,9 +1,12 @@
 #pragma once
 
+#include <memory>
 #include "VulkanContext.h"
 #include "Camera.h"
 
 class UI;
+class CoordinateSystemRenderer;
+class DemoObjectRenderer;
 
 class Renderer {
 public:
@@ -29,4 +32,7 @@ private:
     Camera* m_camera;
     UI* m_ui;
     VkDescriptorPool m_descriptorPool;
+    
+    std::unique_ptr<CoordinateSystemRenderer> m_coordinateRenderer;
+    std::unique_ptr<DemoObjectRenderer> m_demoObjectRenderer;
 };

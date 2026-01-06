@@ -135,22 +135,21 @@ void UI::update() {
 }
 
 void UI::drawCoordinateSystem() {
-    // 创建全屏窗口用于绘制坐标系
+    // 创建角落窗口用于绘制坐标系视口
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | 
-                                   ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar;
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-    ImGui::Begin("Coordinate System", nullptr, window_flags);
+                                   ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoScrollbar |
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+    ImGui::SetNextWindowPos(ImVec2(10, 10)); // 左上角位置
+    ImGui::SetNextWindowSize(ImVec2(150, 150)); // 固定大小
+    ImGui::Begin("Coordinate Viewport", nullptr, window_flags);
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    ImVec2 display_size = ImGui::GetIO().DisplaySize;
-    ImVec2 center = ImVec2(display_size.x * 0.5f, display_size.y * 0.5f);
+    ImVec2 window_pos = ImGui::GetWindowPos();
+    ImVec2 window_size = ImGui::GetWindowSize();
+    ImVec2 center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
 
-    float base_axis_length = 100.0f;
+    float base_axis_length = 50.0f; // 缩小轴长度以适应小窗口
     float axis_thickness = 2.0f;
-
-    // 绘制网格
-    drawGrid();
 
     // 定义坐标轴的3D坐标
     glm::vec3 origin(0.0f, 0.0f, 0.0f);
@@ -166,9 +165,9 @@ void UI::drawCoordinateSystem() {
         // 应用视图变换
         glm::vec4 viewPos = viewMatrix * glm::vec4(pos, 1.0f);
         
-        // 转换到屏幕坐标
-        float screen_x = center.x + viewPos.x * 100.0f; // 缩放因子调整
-        float screen_y = center.y + viewPos.y * 100.0f;
+        // 转换到屏幕坐标，调整缩放以适应小窗口
+        float screen_x = center.x + viewPos.x * 30.0f; // 缩放因子调整
+        float screen_y = center.y - viewPos.y * 30.0f; // Y轴翻转以匹配屏幕坐标
         
         return ImVec2(screen_x, screen_y);
     };
@@ -187,10 +186,11 @@ void UI::drawCoordinateSystem() {
     auto drawArrow = [&](const ImVec2& start, const ImVec2& end, ImU32 color, float thickness) {
         ImVec2 dir = ImVec2(end.x - start.x, end.y - start.y);
         float length = sqrtf(dir.x * dir.x + dir.y * dir.y);
+        if (length < 1.0f) return; // 避免除以零
         ImVec2 unit_dir = ImVec2(dir.x / length, dir.y / length);
         ImVec2 perp_dir = ImVec2(-unit_dir.y, unit_dir.x);
 
-        float arrow_size = 10.0f;
+        float arrow_size = 8.0f;
         ImVec2 arrow_left = ImVec2(
             end.x - unit_dir.x * arrow_size + perp_dir.x * arrow_size * 0.5f,
             end.y - unit_dir.y * arrow_size + perp_dir.y * arrow_size * 0.5f
@@ -209,135 +209,9 @@ void UI::drawCoordinateSystem() {
     drawArrow(origin_2d, z_axis_2d, IM_COL32(0, 0, 255, 255), axis_thickness);
 
     // 绘制标签
-    draw_list->AddText(ImVec2(x_axis_2d.x + 5.0f, x_axis_2d.y - 10.0f), IM_COL32(255, 0, 0, 255), "X");
-    draw_list->AddText(ImVec2(y_axis_2d.x + 5.0f, y_axis_2d.y - 10.0f), IM_COL32(0, 255, 0, 255), "Y");
-    draw_list->AddText(ImVec2(z_axis_2d.x + 5.0f, z_axis_2d.y + 5.0f), IM_COL32(0, 0, 255, 255), "Z");
-    
-    // 根据缩放值决定刻度显示参数
-    float zoom = m_camera->getZoom();
-    int numTicks = 5; // 默认刻度数量
-    float tickStep;   // 刻度间距
-    const char* formatStr; // 刻度值格式
-    
-    if (zoom < 0.5f) {
-        numTicks = 10;
-        tickStep = base_axis_length / numTicks;
-        formatStr = "%.1f";
-    } else if (zoom < 2.0f) {
-        numTicks = 5;
-        tickStep = base_axis_length / numTicks;
-        formatStr = "%.1f";
-    } else {
-        numTicks = 5;
-        tickStep = base_axis_length / numTicks;
-        formatStr = "%.0f";
-    }
-    
-    // 计算单位方向向量
-    ImVec2 dirX = ImVec2(x_axis_2d.x - origin_2d.x, x_axis_2d.y - origin_2d.y);
-    float lengthX = sqrtf(dirX.x * dirX.x + dirX.y * dirX.y);
-    ImVec2 unitDirX = ImVec2(dirX.x / lengthX, dirX.y / lengthX);
-    ImVec2 perpDirX = ImVec2(-unitDirX.y, unitDirX.x);
-    
-    ImVec2 dirY = ImVec2(y_axis_2d.x - origin_2d.x, y_axis_2d.y - origin_2d.y);
-    float lengthY = sqrtf(dirY.x * dirY.x + dirY.y * dirY.y);
-    ImVec2 unitDirY = ImVec2(dirY.x / lengthY, dirY.y / lengthY);
-    ImVec2 perpDirY = ImVec2(-unitDirY.y, unitDirY.x);
-    
-    ImVec2 dirZ = ImVec2(z_axis_2d.x - origin_2d.x, z_axis_2d.y - origin_2d.y);
-    float lengthZ = sqrtf(dirZ.x * dirZ.x + dirZ.y * dirZ.y);
-    ImVec2 unitDirZ = ImVec2(dirZ.x / lengthZ, dirZ.y / lengthZ);
-    ImVec2 perpDirZ = ImVec2(-unitDirZ.y, unitDirZ.x);
-    
-    float tickLength = 5.0f;
-    float textOffset = 2.0f;
-    
-    // 绘制X轴刻度
-    for (int i = 1; i <= numTicks; i++) {
-        float tickValue = i * tickStep;
-        ImVec2 tickPos = ImVec2(
-            origin_2d.x + unitDirX.x * (lengthX * i / numTicks),
-            origin_2d.y + unitDirX.y * (lengthX * i / numTicks)
-        );
-        
-        // 绘制刻度线
-        ImVec2 tickStart = ImVec2(
-            tickPos.x + perpDirX.x * tickLength,
-            tickPos.y + perpDirX.y * tickLength
-        );
-        ImVec2 tickEnd = ImVec2(
-            tickPos.x - perpDirX.x * tickLength,
-            tickPos.y - perpDirX.y * tickLength
-        );
-        draw_list->AddLine(tickStart, tickEnd, IM_COL32(255, 0, 0, 200), axis_thickness);
-        
-        // 绘制刻度值
-        char tickStr[32];
-        snprintf(tickStr, sizeof(tickStr), formatStr, tickValue);
-        ImVec2 textPos = ImVec2(
-            tickPos.x + perpDirX.x * (tickLength + textOffset),
-            tickPos.y + perpDirX.y * (tickLength + textOffset)
-        );
-        draw_list->AddText(textPos, IM_COL32(255, 255, 255, 255), tickStr);
-    }
-    
-    // 绘制Y轴刻度
-    for (int i = 1; i <= numTicks; i++) {
-        float tickValue = i * tickStep;
-        ImVec2 tickPos = ImVec2(
-            origin_2d.x + unitDirY.x * (lengthY * i / numTicks),
-            origin_2d.y + unitDirY.y * (lengthY * i / numTicks)
-        );
-        
-        // 绘制刻度线
-        ImVec2 tickStart = ImVec2(
-            tickPos.x + perpDirY.x * tickLength,
-            tickPos.y + perpDirY.y * tickLength
-        );
-        ImVec2 tickEnd = ImVec2(
-            tickPos.x - perpDirY.x * tickLength,
-            tickPos.y - perpDirY.y * tickLength
-        );
-        draw_list->AddLine(tickStart, tickEnd, IM_COL32(0, 255, 0, 200), axis_thickness);
-        
-        // 绘制刻度值
-        char tickStr[32];
-        snprintf(tickStr, sizeof(tickStr), formatStr, tickValue);
-        ImVec2 textPos = ImVec2(
-            tickPos.x + perpDirY.x * (tickLength + textOffset),
-            tickPos.y + perpDirY.y * (tickLength + textOffset)
-        );
-        draw_list->AddText(textPos, IM_COL32(255, 255, 255, 255), tickStr);
-    }
-    
-    // 绘制Z轴刻度
-    for (int i = 1; i <= numTicks; i++) {
-        float tickValue = i * tickStep;
-        ImVec2 tickPos = ImVec2(
-            origin_2d.x + unitDirZ.x * (lengthZ * i / numTicks),
-            origin_2d.y + unitDirZ.y * (lengthZ * i / numTicks)
-        );
-        
-        // 绘制刻度线
-        ImVec2 tickStart = ImVec2(
-            tickPos.x + perpDirZ.x * tickLength,
-            tickPos.y + perpDirZ.y * tickLength
-        );
-        ImVec2 tickEnd = ImVec2(
-            tickPos.x - perpDirZ.x * tickLength,
-            tickPos.y - perpDirZ.y * tickLength
-        );
-        draw_list->AddLine(tickStart, tickEnd, IM_COL32(0, 0, 255, 200), axis_thickness);
-        
-        // 绘制刻度值
-        char tickStr[32];
-        snprintf(tickStr, sizeof(tickStr), formatStr, tickValue);
-        ImVec2 textPos = ImVec2(
-            tickPos.x + perpDirZ.x * (tickLength + textOffset),
-            tickPos.y + perpDirZ.y * (tickLength + textOffset)
-        );
-        draw_list->AddText(textPos, IM_COL32(255, 255, 255, 255), tickStr);
-    }
+    draw_list->AddText(ImVec2(x_axis_2d.x + 3.0f, x_axis_2d.y - 10.0f), IM_COL32(255, 0, 0, 255), "X");
+    draw_list->AddText(ImVec2(y_axis_2d.x + 3.0f, y_axis_2d.y - 10.0f), IM_COL32(0, 255, 0, 255), "Y");
+    draw_list->AddText(ImVec2(z_axis_2d.x + 3.0f, z_axis_2d.y + 5.0f), IM_COL32(0, 0, 255, 255), "Z");
 
     ImGui::End();
 }
@@ -384,43 +258,98 @@ void UI::drawGrid() {
 void UI::drawControlPanel() {
     Config& config = Config::getInstance();
     
-    // 显示控制面板
-    ImGui::Begin("Control Panel", &m_showControlPanel, ImGuiWindowFlags_AlwaysAutoResize);
+    // 显示控制面板 - 3ds Max风格
+    ImGui::Begin("3ds Max Style Panel", &m_showControlPanel, ImGuiWindowFlags_AlwaysAutoResize);
     
-    // 相机控制
-    ImGui::Text("Camera Controls");
-    ImGui::Separator();
-    ImGui::Text("Rotation X: %.3f", m_camera->getRotationX());
-    ImGui::Text("Rotation Y: %.3f", m_camera->getRotationY());
-    ImGui::Text("Zoom: %.3f", m_camera->getZoom());
-    ImGui::Separator();
+    // 视图控制
+    if (ImGui::CollapsingHeader("View Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Camera Info");
+        ImGui::Text("Rotation X: %.2f", m_camera->getRotationX());
+        ImGui::Text("Rotation Y: %.2f", m_camera->getRotationY());
+        ImGui::Text("Zoom: %.2f", m_camera->getZoom());
+        ImGui::Separator();
+        
+        // 视图操作按钮
+        if (ImGui::Button("Front")) { 
+            m_camera->setView("Front");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Back")) { 
+            m_camera->setView("Back");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Left")) { 
+            m_camera->setView("Left");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Right")) { 
+            m_camera->setView("Right");
+        }
+        
+        ImGui::Separator();
+        
+        if (ImGui::Button("Top")) { 
+            m_camera->setView("Top");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Bottom")) { 
+            m_camera->setView("Bottom");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Perspective")) { 
+            m_camera->setView("Perspective");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Home")) { 
+            m_camera->setView("Home");
+        }
+    }
     
     // 配置设置
-    ImGui::Text("Configuration");
-    ImGui::Separator();
-    
-    // FPS设置
-    int fps = config.getFPS();
-    if (ImGui::SliderInt("Target FPS", &fps, 10, 240)) {
-        config.setFPS(fps);
+    if (ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // FPS设置
+        int fps = config.getFPS();
+        if (ImGui::SliderInt("Target FPS", &fps, 10, 240)) {
+            config.setFPS(fps);
+        }
+        
+        // Debug模式设置
+        bool debugMode = config.isDebugMode();
+        if (ImGui::Checkbox("Debug Mode", &debugMode)) {
+            config.setDebugMode(debugMode);
+        }
     }
     
-    // Debug模式设置
-    bool debugMode = config.isDebugMode();
-    if (ImGui::Checkbox("Debug Mode", &debugMode)) {
-        config.setDebugMode(debugMode);
+    // 显示选项
+    if (ImGui::CollapsingHeader("Display", ImGuiTreeNodeFlags_DefaultOpen)) {
+        static bool showGrid = true;
+        static bool showAxes = true;
+        static bool showWireframe = false;
+        
+        ImGui::Checkbox("Show Grid", &showGrid);
+        ImGui::Checkbox("Show Axes", &showAxes);
+        ImGui::Checkbox("Show Wireframe", &showWireframe);
     }
     
-    ImGui::Separator();
-    
-    // 指令说明
-    ImGui::Text("Instructions:");
-    ImGui::Text("- Left Click + Drag: Rotate");
-    ImGui::Text("- Middle Click + Drag: Pan");
-    ImGui::Text("- Scroll: Zoom");
-    ImGui::Text("- ESC: Exit");
+    // 操作说明
+    if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Mouse Controls:");
+        ImGui::BulletText("Left Drag: Rotate");
+        ImGui::BulletText("Middle Drag: Pan");
+        ImGui::BulletText("Right Drag: Orbit");
+        ImGui::BulletText("Scroll: Zoom");
+        ImGui::Separator();
+        ImGui::Text("Keyboard:");
+        ImGui::BulletText("ESC: Exit");
+        ImGui::BulletText("F: Focus on object");
+        ImGui::BulletText("H: Home view");
+    }
     
     ImGui::End();
+}
+
+VkDescriptorPool UI::getDescriptorPool() const {
+    return m_renderer->getDescriptorPool();
 }
 
 void UI::cleanup() {

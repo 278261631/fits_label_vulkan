@@ -13,6 +13,7 @@ public:
     bool init();
     void update();
     void cleanup();
+    VkDescriptorPool getDescriptorPool() const;
 
 private:
     void initImGui();
