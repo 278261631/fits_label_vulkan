@@ -4,14 +4,16 @@
 #include <glm/glm.hpp>
 
 class Camera;
+class UI;
 
 class InputHandler {
 public:
-    InputHandler(GLFWwindow* window, Camera* camera);
+    InputHandler(GLFWwindow* window, Camera* camera, UI* ui = nullptr);
     ~InputHandler() = default;
 
     void init();
     void pollEvents();
+    void setUI(UI* ui);
 
 private:
     // 鼠标事件回调
@@ -25,8 +27,12 @@ private:
     // 窗口大小变化回调
     static void windowSizeCallback(GLFWwindow* window, int width, int height);
 
+    // UI交互检测辅助方法
+    bool isUIInteraction() const;
+
     GLFWwindow* m_window;
     Camera* m_camera;
+    UI* m_ui;
 
     // 鼠标状态
     bool m_isRotating;

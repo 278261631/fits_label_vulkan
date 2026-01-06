@@ -36,7 +36,7 @@ bool Application::init() {
         // 创建相机
         m_camera = std::make_unique<Camera>(m_width, m_height);
 
-        // 初始化输入处理
+        // 初始化输入处理（先用nullptr，稍后设置UI）
         m_inputHandler = std::make_unique<InputHandler>(m_vulkanContext->getWindow(), m_camera.get());
         m_inputHandler->init();
 
@@ -56,6 +56,9 @@ bool Application::init() {
         
         // 设置渲染器的UI指针
         m_renderer->setUI(m_ui.get());
+        
+        // 设置输入处理器的UI指针
+        m_inputHandler->setUI(m_ui.get());
         
         // 初始化插件系统
         m_pluginContext = std::make_unique<PluginContext>(
