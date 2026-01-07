@@ -37,7 +37,7 @@ void InputHandler::pollEvents() {
 bool InputHandler::isUIInteraction() const {
     // 添加对m_ui指针的检查日志
     if (!m_ui) {
-        Logger::info("UI Interaction check: m_ui is null, returning false");
+        Logger::trace("UI Interaction check: m_ui is null, returning false");
         return false;
     }
     
@@ -45,7 +45,7 @@ bool InputHandler::isUIInteraction() const {
     
     // 检查是否有任何ImGui项目处于活动状态
     if (io.WantCaptureMouse) {
-        Logger::info("UI Interaction detected: io.WantCaptureMouse is true");
+        Logger::trace("UI Interaction detected: io.WantCaptureMouse is true");
         return true;
     }
     
@@ -57,7 +57,7 @@ bool InputHandler::isUIInteraction() const {
     if (isDragging) {
         // 如果正在拖拽，检查是否在窗口区域
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || isWindowFocused || isAnyItemActive) {
-            Logger::info("UI Interaction detected: Mouse dragging over window (Dragging: {}, WindowHovered: {}, WindowFocused: {}, AnyItemActive: {})", 
+            Logger::trace("UI Interaction detected: Mouse dragging over window (Dragging: {}, WindowHovered: {}, WindowFocused: {}, AnyItemActive: {})", 
                         isDragging, ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow), isWindowFocused, isAnyItemActive);
             return true;
         }
@@ -66,13 +66,13 @@ bool InputHandler::isUIInteraction() const {
     // 检查是否有任何窗口被悬停或聚焦
     bool isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
     if (isWindowHovered || isWindowFocused || isAnyItemActive) {
-        Logger::info("UI Interaction detected: Window hovered or focused or item active (Hovered: {}, Focused: {}, AnyItemActive: {})", 
+        Logger::trace("UI Interaction detected: Window hovered or focused or item active (Hovered: {}, Focused: {}, AnyItemActive: {})", 
                     isWindowHovered, isWindowFocused, isAnyItemActive);
         return true;
     }
     
     // 添加调试日志显示当前状态
-    Logger::info("UI Interaction check: No UI interaction detected (WantCaptureMouse: {}, Dragging: {}, WindowHovered: {}, WindowFocused: {}, AnyItemActive: {})", 
+    Logger::trace("UI Interaction check: No UI interaction detected (WantCaptureMouse: {}, Dragging: {}, WindowHovered: {}, WindowFocused: {}, AnyItemActive: {})", 
                 io.WantCaptureMouse, isDragging, isWindowHovered, isWindowFocused, isAnyItemActive);
     
     return false;
@@ -84,12 +84,12 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
         bool isUIInteraction = s_instance->isUIInteraction();
         
         if (action == GLFW_PRESS) {
-            Logger::info("Mouse button {} pressed - UI Interaction: {}", 
+            Logger::trace("Mouse button {} pressed - UI Interaction: {}", 
                          (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" : 
                           button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"), 
                          isUIInteraction ? "YES" : "NO");
         } else if (action == GLFW_RELEASE) {
-            Logger::info("Mouse button {} released - UI Interaction: {}", 
+            Logger::trace("Mouse button {} released - UI Interaction: {}", 
                          (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" : 
                           button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"), 
                          isUIInteraction ? "YES" : "NO");
@@ -104,7 +104,7 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
             s_instance->m_isPanning = false;
             
             if (wasRotating || wasPanning) {
-                Logger::info("Reset camera control state due to UI interaction (wasRotating: {}, wasPanning: {})", 
+                Logger::trace("Reset camera control state due to UI interaction (wasRotating: {}, wasPanning: {})", 
                              wasRotating, wasPanning);
             }
         } else {
@@ -114,10 +114,10 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
                     double xpos, ypos;
                     glfwGetCursorPos(window, &xpos, &ypos);
                     s_instance->m_lastMousePos = glm::vec2((float)xpos, (float)ypos);
-                    Logger::info("Started camera rotation (mouse pos: {}, {})", (float)xpos, (float)ypos);
+                    Logger::trace("Started camera rotation (mouse pos: {}, {})", (float)xpos, (float)ypos);
                 } else if (action == GLFW_RELEASE) {
                     s_instance->m_isRotating = false;
-                    Logger::info("Stopped camera rotation");
+                    Logger::trace("Stopped camera rotation");
                 }
             } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
                 if (action == GLFW_PRESS) {
@@ -125,10 +125,10 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
                     double xpos, ypos;
                     glfwGetCursorPos(window, &xpos, &ypos);
                     s_instance->m_lastMousePos = glm::vec2((float)xpos, (float)ypos);
-                    Logger::info("Started camera panning (mouse pos: {}, {})", (float)xpos, (float)ypos);
+                    Logger::trace("Started camera panning (mouse pos: {}, {})", (float)xpos, (float)ypos);
                 } else if (action == GLFW_RELEASE) {
                     s_instance->m_isPanning = false;
-                    Logger::info("Stopped camera panning");
+                    Logger::trace("Stopped camera panning");
                 }
             }
         }
@@ -143,7 +143,7 @@ void InputHandler::mouseMoveCallback(GLFWwindow* window, double xpos, double ypo
         // 检查是否在UI元素上，如果是则不处理相机控制
         bool isUIInteraction = s_instance->isUIInteraction();
 
-        Logger::info("Mouse move: ({}, {}) delta: ({}, {}) - UI Interaction: {} - Rotating: {} - Panning: {}", 
+        Logger::trace("Mouse move: ({}, {}) delta: ({}, {}) - UI Interaction: {} - Rotating: {} - Panning: {}", 
                      (float)xpos, (float)ypos, delta.x, delta.y, 
                      isUIInteraction ? "YES" : "NO",
                      s_instance->m_isRotating ? "YES" : "NO",
@@ -157,16 +157,16 @@ void InputHandler::mouseMoveCallback(GLFWwindow* window, double xpos, double ypo
             s_instance->m_isPanning = false;
             
             if (wasRotating || wasPanning) {
-                Logger::info("Reset camera control state due to UI interaction during mouse move (wasRotating: {}, wasPanning: {})", 
+                Logger::trace("Reset camera control state due to UI interaction during mouse move (wasRotating: {}, wasPanning: {})", 
                              wasRotating, wasPanning);
             }
         } else {
             if (s_instance->m_isRotating) {
                 s_instance->m_camera->rotate(delta.x, delta.y);
-                Logger::info("Camera rotation applied: ({}, {})", delta.x, delta.y);
+                Logger::trace("Camera rotation applied: ({}, {})", delta.x, delta.y);
             } else if (s_instance->m_isPanning) {
                 s_instance->m_camera->pan(delta.x, delta.y);
-                Logger::info("Camera panning applied: ({}, {})", delta.x, delta.y);
+                Logger::trace("Camera panning applied: ({}, {})", delta.x, delta.y);
             }
         }
 
@@ -179,13 +179,13 @@ void InputHandler::scrollCallback(GLFWwindow* window, double xoffset, double yof
         // 检查是否在UI元素上，如果是则不处理相机控制
         bool isUIInteraction = s_instance->isUIInteraction();
 
-        Logger::info("Mouse scroll: ({}, {}) - UI Interaction: {}", xoffset, yoffset, isUIInteraction ? "YES" : "NO");
+        Logger::trace("Mouse scroll: ({}, {}) - UI Interaction: {}", xoffset, yoffset, isUIInteraction ? "YES" : "NO");
 
         if (!isUIInteraction) {
             s_instance->m_camera->zoom((float)yoffset);
-            Logger::info("Camera zoom applied: {}", (float)yoffset);
+            Logger::trace("Camera zoom applied: {}", (float)yoffset);
         } else {
-            Logger::info("Camera zoom skipped due to UI interaction");
+            Logger::trace("Camera zoom skipped due to UI interaction");
         }
     }
 }

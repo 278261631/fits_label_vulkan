@@ -176,12 +176,12 @@ void Renderer::drawFrame() {
     if (m_coordinateRenderer) {
         m_coordinateRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
     }
-    
+
     // 检查是否有UI需要更新和渲染
     if (m_ui != nullptr) {
         Logger::debug("  Calling UI::update()...");
         m_ui->update();
-        
+
         // 执行ImGui渲染命令 - 注意：这必须在渲染通道内进行！
         Logger::debug("  Calling ImGui_ImplVulkan_RenderDrawData...");
         ImDrawData* drawData = ImGui::GetDrawData();

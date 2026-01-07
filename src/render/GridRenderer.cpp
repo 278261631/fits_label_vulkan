@@ -3,8 +3,11 @@
 #include "Camera.h"
 #include "Logger.h"
 #include "ShaderCompiler.h"
+#include <imgui.h>
 #include <stdexcept>
 #include <array>
+#include <sstream>
+#include <iomanip>
 #include <glm/gtc/matrix_transform.hpp>
 
 GridRenderer::GridRenderer(VulkanContext* vulkanContext, Camera* camera)
@@ -21,11 +24,12 @@ GridRenderer::~GridRenderer() {
 bool GridRenderer::init() {
     try {
         generateVertexData();
+        generateLabels();
         createVertexBuffer();
         createShaderModules();
         createPipelineLayout();
         createGraphicsPipeline();
-        
+
         Logger::info("GridRenderer initialized successfully!");
         return true;
     } catch (const std::exception& e) {
@@ -225,6 +229,144 @@ void GridRenderer::createVertexBuffer() {
     Logger::debug("Grid vertex buffer created successfully");
 }
 
+void GridRenderer::generateLabels() {
+    m_labels.clear();
+
+    int halfGrid = static_cast<int>(m_gridSize / m_gridSpacing);
+    Logger::info("GridRenderer: generating labels, halfGrid={}, gridSize={}, gridSpacing={}",
+                 halfGrid, m_gridSize, m_gridSpacing);
+
+    // X axis labels (red)
+    for (int i = -halfGrid; i <= halfGrid; i++) {
+        if (i == 0) continue;  // Skip origin
+        float x = i * m_gridSpacing;
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(0) << x;
+        m_labels.push_back(GridLabel(
+            glm::vec3(x, -0.3f, 0.0f),
+            oss.str(),
+            glm::vec3(1.0f, 0.3f, 0.3f)
+        ));
+    }
+
+    // Y axis labels (green)
+    for (int i = -halfGrid; i <= halfGrid; i++) {
+        if (i == 0) continue;
+        float y = i * m_gridSpacing;
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(0) << y;
+        m_labels.push_back(GridLabel(
+            glm::vec3(-0.3f, y, 0.0f),
+            oss.str(),
+            glm::vec3(0.3f, 1.0f, 0.3f)
+        ));
+    }
+
+    // Z axis labels (blue)
+    for (int i = -halfGrid; i <= halfGrid; i++) {
+        if (i == 0) continue;
+        float z = i * m_gridSpacing;
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(0) << z;
+        m_labels.push_back(GridLabel(
+            glm::vec3(0.0f, -0.3f, z),
+            oss.str(),
+            glm::vec3(0.3f, 0.3f, 1.0f)
+        ));
+    }
+
+    // Origin label
+    m_labels.push_back(GridLabel(
+        glm::vec3(-0.3f, -0.3f, 0.0f),
+        "0",
+        glm::vec3(1.0f, 1.0f, 1.0f)
+    ));
+
+    // Axis name labels
+    m_labels.push_back(GridLabel(
+        glm::vec3(m_gridSize + 0.5f, 0.0f, 0.0f),
+        "X",
+        glm::vec3(1.0f, 0.2f, 0.2f)
+    ));
+    m_labels.push_back(GridLabel(
+        glm::vec3(0.0f, m_gridSize + 0.5f, 0.0f),
+        "Y",
+        glm::vec3(0.2f, 1.0f, 0.2f)
+    ));
+    m_labels.push_back(GridLabel(
+        glm::vec3(0.0f, 0.0f, m_gridSize + 0.5f),
+        "Z",
+        glm::vec3(0.2f, 0.2f, 1.0f)
+    ));
+
+    Logger::info("GridRenderer: generated {} labels", m_labels.size());
+}
+
+glm::vec2 GridRenderer::worldToScreen(const glm::vec3& worldPos) {
+    glm::mat4 view = m_camera->getViewMatrix();
+    glm::mat4 proj = m_camera->getProjectionMatrix();
+    glm::vec4 clipPos = proj * view * glm::vec4(worldPos, 1.0f);
+
+    if (clipPos.w <= 0.0f) {
+        return glm::vec2(-10000.0f, -10000.0f);  // Behind camera
+    }
+
+    glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+
+    VkExtent2D extent = m_vulkanContext->getSwapchainExtent();
+    float screenX = (ndc.x + 1.0f) * 0.5f * extent.width;
+    float screenY = (1.0f - ndc.y) * 0.5f * extent.height;  // Flip Y for screen coords
+
+    return glm::vec2(screenX, screenY);
+}
+
+void GridRenderer::drawLabels() {
+    if (!m_showLabels) return;
+
+    ImDrawList* drawList = ImGui::GetForegroundDrawList();  // Use foreground so labels appear on top
+    if (!drawList) {
+        Logger::warn("GridRenderer::drawLabels - drawList is null!");
+        return;
+    }
+
+    int drawnCount = 0;
+    for (const auto& label : m_labels) {
+        glm::vec2 screenPos = worldToScreen(label.worldPos);
+
+        // Skip if behind camera or off screen
+        if (screenPos.x < -100 || screenPos.y < -100) continue;
+
+        VkExtent2D extent = m_vulkanContext->getSwapchainExtent();
+        if (screenPos.x > extent.width + 100 || screenPos.y > extent.height + 100) continue;
+
+        ImU32 color = IM_COL32(
+            static_cast<int>(label.color.r * 255),
+            static_cast<int>(label.color.g * 255),
+            static_cast<int>(label.color.b * 255),
+            255
+        );
+
+        // Draw text with slight shadow for visibility
+        drawList->AddText(
+            ImVec2(screenPos.x + 1, screenPos.y + 1),
+            IM_COL32(0, 0, 0, 180),
+            label.text.c_str()
+        );
+        drawList->AddText(
+            ImVec2(screenPos.x, screenPos.y),
+            color,
+            label.text.c_str()
+        );
+        drawnCount++;
+    }
+
+    // Log once every 100 frames
+    static int frameCounter = 0;
+    if (frameCounter++ % 100 == 0) {
+        Logger::info("GridRenderer::drawLabels - drew {} labels out of {}", drawnCount, m_labels.size());
+    }
+}
+
 uint32_t GridRenderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(m_vulkanContext->getPhysicalDevice(), &memProperties);
@@ -415,6 +557,7 @@ void GridRenderer::rebuildIfNeeded() {
     }
 
     generateVertexData();
+    generateLabels();
     createVertexBuffer();
 
     m_needsRebuild = false;

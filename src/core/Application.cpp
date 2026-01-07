@@ -53,9 +53,12 @@ bool Application::init() {
             Logger::error("Failed to initialize UI!");
             return false;
         }
-        
+
         // 设置渲染器的UI指针
         m_renderer->setUI(m_ui.get());
+
+        // 设置UI的GridRenderer指针
+        m_ui->setGridRenderer(m_renderer->getGridRenderer());
         
         // 设置输入处理器的UI指针
         m_inputHandler->setUI(m_ui.get());

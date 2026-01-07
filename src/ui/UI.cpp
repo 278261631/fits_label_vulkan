@@ -1,5 +1,6 @@
 #include "UI.h"
 #include "Renderer.h"
+#include "GridRenderer.h"
 #include "Config.h"
 #include "Logger.h"
 #include <imgui.h>
@@ -100,9 +101,9 @@ void UI::initImGui() {
 
 void UI::update() {
     Config& config = Config::getInstance();
-    
+
     Logger::debug("  Entering UI::update...");
-    
+
     // 开始ImGui帧 - 注意顺序：先调用GLFW后端，再调用Vulkan后端
     Logger::debug("  Calling ImGui_ImplGlfw_NewFrame...");
     ImGui_ImplGlfw_NewFrame();
@@ -110,15 +111,20 @@ void UI::update() {
     ImGui_ImplVulkan_NewFrame();
     Logger::debug("  Calling ImGui::NewFrame...");
     ImGui::NewFrame();
-    
+
+    // Draw grid labels (must be after NewFrame, before Render)
+    if (m_gridRenderer) {
+        m_gridRenderer->drawLabels();
+    }
+
     // 绘制坐标系和网格
     Logger::debug("  Drawing coordinate system...");
     drawCoordinateSystem();
-    
+
     // 绘制控制面板
     Logger::debug("  Drawing control panel...");
     drawControlPanel();
-    
+
     // 绘制简单的信息窗口
     Logger::debug("  Drawing simple ImGui text...");
     ImGui::Begin("Simple Info");
@@ -127,10 +133,10 @@ void UI::update() {
     static char logLevelStr[256] = "Info"; // 默认日志级别
     ImGui::InputText("Log Level", logLevelStr, sizeof(logLevelStr));
     ImGui::End();
-    
+
     Logger::debug("  Calling ImGui::Render...");
     ImGui::Render();
-    
+
     Logger::debug("  Exiting UI::update...");
 }
 
