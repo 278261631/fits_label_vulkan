@@ -2,6 +2,7 @@
 #include "UI.h"
 #include "CoordinateSystemRenderer.h"
 #include "DemoObjectRenderer.h"
+#include "GridRenderer.h"
 #include "Config.h"
 #include "Logger.h"
 #include <imgui.h>
@@ -74,7 +75,15 @@ bool Renderer::init() {
             cleanup();
             return false;
         }
-    
+
+        // 初始化网格渲染器
+        m_gridRenderer = std::make_unique<GridRenderer>(m_vulkanContext, m_camera);
+        if (!m_gridRenderer->init()) {
+            Logger::error("Failed to initialize grid renderer!");
+            cleanup();
+            return false;
+        }
+
     return true;
     } catch (const std::exception& e) {
         Logger::error("Renderer initialization error: {}", e.what());
@@ -149,13 +158,19 @@ void Renderer::drawFrame() {
     renderPassInfo.pClearValues = &clearColor;
     
     vkCmdBeginRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    
+
+    // 绘制网格（先绘制，作为背景）
+    Logger::debug("  Drawing grid...");
+    if (m_gridRenderer) {
+        m_gridRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    }
+
     // 绘制演示物体
     Logger::debug("  Drawing demo object...");
     if (m_demoObjectRenderer) {
         m_demoObjectRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
     }
-    
+
     // 绘制坐标系
     Logger::debug("  Drawing coordinate system...");
     if (m_coordinateRenderer) {
@@ -252,13 +267,19 @@ void Renderer::cleanup() {
         m_coordinateRenderer->cleanup();
         m_coordinateRenderer.reset();
     }
-    
+
     // 清理演示物体渲染器
     if (m_demoObjectRenderer) {
         m_demoObjectRenderer->cleanup();
         m_demoObjectRenderer.reset();
     }
-    
+
+    // 清理网格渲染器
+    if (m_gridRenderer) {
+        m_gridRenderer->cleanup();
+        m_gridRenderer.reset();
+    }
+
     if (m_descriptorPool != VK_NULL_HANDLE) {
         vkDestroyDescriptorPool(m_vulkanContext->getDevice(), m_descriptorPool, nullptr);
         m_descriptorPool = VK_NULL_HANDLE;

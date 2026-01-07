@@ -7,6 +7,7 @@
 class UI;
 class CoordinateSystemRenderer;
 class DemoObjectRenderer;
+class GridRenderer;
 
 class Renderer {
 public:
@@ -16,12 +17,13 @@ public:
     bool init();
     void render();
     void cleanup();
-    
+
     // Setters
     void setUI(UI* ui) { m_ui = ui; }
-    
+
     // Getters
     VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
+    GridRenderer* getGridRenderer() const { return m_gridRenderer.get(); }
 
 private:
     void drawFrame();
@@ -32,7 +34,8 @@ private:
     Camera* m_camera;
     UI* m_ui;
     VkDescriptorPool m_descriptorPool;
-    
+
     std::unique_ptr<CoordinateSystemRenderer> m_coordinateRenderer;
     std::unique_ptr<DemoObjectRenderer> m_demoObjectRenderer;
+    std::unique_ptr<GridRenderer> m_gridRenderer;
 };

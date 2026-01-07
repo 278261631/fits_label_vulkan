@@ -110,6 +110,8 @@ set(PROJECT_SOURCE_FILES
     src/render/Renderer.cpp
     src/render/CoordinateSystemRenderer.cpp
     src/render/DemoObjectRenderer.cpp
+    src/render/GridRenderer.cpp
+    src/render/ShaderCompiler.cpp
     src/vulkan/VulkanContext.cpp
     src/ui/UI.cpp
     src/plugins/DemoPlugin.cpp

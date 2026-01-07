@@ -2,52 +2,12 @@
 #include "VulkanContext.h"
 #include "Camera.h"
 #include "Logger.h"
+#include "ShaderCompiler.h"
 #include <stdexcept>
 #include <fstream>
 #include <iostream>
 #include <array>
-
-// 顶点着色器源码（GLSL）
-const std::string demoVertexShaderSource = R"(
-#version 450
-
-layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} ubo;
-
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec3 inNormal;
-
-layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec3 fragNormal;
-
-void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    fragColor = inColor;
-    fragNormal = inNormal;
-}
-)";
-
-// 片段着色器源码（GLSL）
-const std::string demoFragmentShaderSource = R"(
-#version 450
-
-layout(location = 0) in vec3 fragColor;
-layout(location = 1) in vec3 fragNormal;
-
-layout(location = 0) out vec4 outColor;
-
-void main() {
-    // 简单的光照计算
-    vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
-    float diff = max(dot(normalize(fragNormal), lightDir), 0.0);
-    vec3 color = fragColor * (0.5 + 0.5 * diff);
-    outColor = vec4(color, 1.0);
-}
-)";
+#include <glm/gtc/matrix_transform.hpp>
 
 DemoObjectRenderer::DemoObjectRenderer(VulkanContext* vulkanContext, Camera* camera)
     : m_vulkanContext(vulkanContext), m_camera(camera),
@@ -501,31 +461,38 @@ uint32_t DemoObjectRenderer::findMemoryType(uint32_t typeFilter, VkMemoryPropert
 
 void DemoObjectRenderer::createShaderModules() {
     Logger::debug("Creating demo object shader modules...");
-    
-    // 将字符串转换为char向量
-    std::vector<char> vertexShaderCode(demoVertexShaderSource.begin(), demoVertexShaderSource.end());
-    std::vector<char> fragmentShaderCode(demoFragmentShaderSource.begin(), demoFragmentShaderSource.end());
-    
-    m_vertexShaderModule = createShaderModule(vertexShaderCode);
-    m_fragmentShaderModule = createShaderModule(fragmentShaderCode);
-    
+
+    m_vertexShaderModule = ShaderCompiler::loadAndCreateModule(
+        m_vulkanContext->getDevice(),
+        "shaders/demo.vert.spv");
+
+    m_fragmentShaderModule = ShaderCompiler::loadAndCreateModule(
+        m_vulkanContext->getDevice(),
+        "shaders/demo.frag.spv");
+
     Logger::debug("Demo object shader modules created successfully");
 }
 
 void DemoObjectRenderer::createPipelineLayout() {
     Logger::debug("Creating demo object pipeline layout...");
-    
+
+    // Push constant range for MVP matrix
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(glm::mat4);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pSetLayouts = nullptr;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
     if (vkCreatePipelineLayout(m_vulkanContext->getDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout!");
     }
-    
+
     Logger::debug("Demo object pipeline layout created successfully");
 }
 
@@ -689,15 +656,24 @@ void DemoObjectRenderer::createDescriptorSets() {
 void DemoObjectRenderer::draw(VkCommandBuffer commandBuffer) {
     // 绑定管线
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
-    
+
+    // Calculate MVP matrix
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = m_camera->getViewMatrix();
+    glm::mat4 proj = m_camera->getProjectionMatrix();
+    glm::mat4 mvp = proj * view * model;
+
+    // Push MVP matrix
+    vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &mvp);
+
     // 设置顶点缓冲区
     VkBuffer vertexBuffers[] = {m_vertexBuffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    
+
     // 设置索引缓冲区
     vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    
+
     // 设置动态视口和裁剪矩形
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -707,12 +683,12 @@ void DemoObjectRenderer::draw(VkCommandBuffer commandBuffer) {
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    
+
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = m_vulkanContext->getSwapchainExtent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-    
+
     // 绘制立方体
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
 }
