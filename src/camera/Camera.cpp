@@ -40,13 +40,18 @@ void Camera::rotate(float deltaX, float deltaY) {
 }
 
 void Camera::pan(float deltaX, float deltaY) {
-    // 平移操作应该移动中心点，而不是相机位置
-    m_centerPoint.x += deltaX * m_panSensitivity;
-    m_centerPoint.y += deltaY * m_panSensitivity;
-    
-    // 相机位置也相应更新，保持相对位置不变
-    m_position.x += deltaX * m_panSensitivity;
-    m_position.y += deltaY * m_panSensitivity;
+    // Calculate pan speed based on current distance to center (zoom level)
+    glm::vec3 relativePos = m_position - m_centerPoint;
+    float distance = glm::length(relativePos);
+    float adjustedSensitivity = m_panSensitivity * distance * 0.002f;
+
+    // Pan moves the center point, camera follows
+    m_centerPoint.x += deltaX * adjustedSensitivity;
+    m_centerPoint.y += deltaY * adjustedSensitivity;
+
+    // Update camera position to maintain relative position
+    m_position.x += deltaX * adjustedSensitivity;
+    m_position.y += deltaY * adjustedSensitivity;
 }
 
 void Camera::zoom(float delta) {
