@@ -277,8 +277,9 @@ void InputHandler::pickPoint(double mouseX, double mouseY) {
         glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
 
         // Convert to screen coordinates
+        // Vulkan NDC: Y points down, so we use (ndc.y + 1.0f) directly
         float screenX = (ndc.x + 1.0f) * 0.5f * windowWidth;
-        float screenY = (1.0f - ndc.y) * 0.5f * windowHeight;  // Y is flipped
+        float screenY = (ndc.y + 1.0f) * 0.5f * windowHeight;
 
         // Calculate distance to mouse
         float dx = screenX - (float)mouseX;

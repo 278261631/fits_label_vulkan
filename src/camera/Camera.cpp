@@ -46,12 +46,13 @@ void Camera::pan(float deltaX, float deltaY) {
     float adjustedSensitivity = m_panSensitivity * distance * 0.002f;
 
     // Pan moves the center point, camera follows
+    // Note: deltaY is negated because screen Y is down, world Y is up
     m_centerPoint.x += deltaX * adjustedSensitivity;
-    m_centerPoint.y += deltaY * adjustedSensitivity;
+    m_centerPoint.y -= deltaY * adjustedSensitivity;
 
     // Update camera position to maintain relative position
     m_position.x += deltaX * adjustedSensitivity;
-    m_position.y += deltaY * adjustedSensitivity;
+    m_position.y -= deltaY * adjustedSensitivity;
 }
 
 void Camera::zoom(float delta) {
