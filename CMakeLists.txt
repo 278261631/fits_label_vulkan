@@ -111,6 +111,7 @@ set(PROJECT_SOURCE_FILES
     src/render/CoordinateSystemRenderer.cpp
     src/render/DemoObjectRenderer.cpp
     src/render/GridRenderer.cpp
+    src/render/PointCloudRenderer.cpp
     src/render/ShaderCompiler.cpp
     src/vulkan/VulkanContext.cpp
     src/ui/UI.cpp

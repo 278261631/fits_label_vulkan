@@ -3,6 +3,8 @@
 #include "CoordinateSystemRenderer.h"
 #include "DemoObjectRenderer.h"
 #include "GridRenderer.h"
+#include "PointCloudRenderer.h"
+#include "PluginContext.h"
 #include "Config.h"
 #include "Logger.h"
 #include <imgui.h>
@@ -13,7 +15,7 @@
 
 Renderer::Renderer(VulkanContext* vulkanContext, Camera* camera, UI* ui)
     : m_vulkanContext(vulkanContext), m_camera(camera), m_ui(ui),
-      m_descriptorPool(VK_NULL_HANDLE) {}
+      m_pluginContext(nullptr), m_descriptorPool(VK_NULL_HANDLE) {}
 
 Renderer::~Renderer() {
     cleanup();
@@ -80,6 +82,14 @@ bool Renderer::init() {
         m_gridRenderer = std::make_unique<GridRenderer>(m_vulkanContext, m_camera);
         if (!m_gridRenderer->init()) {
             Logger::error("Failed to initialize grid renderer!");
+            cleanup();
+            return false;
+        }
+
+        // 初始化点云渲染器
+        m_pointCloudRenderer = std::make_unique<PointCloudRenderer>(m_vulkanContext, m_camera);
+        if (!m_pointCloudRenderer->init()) {
+            Logger::error("Failed to initialize point cloud renderer!");
             cleanup();
             return false;
         }
@@ -175,6 +185,13 @@ void Renderer::drawFrame() {
     Logger::debug("  Drawing coordinate system...");
     if (m_coordinateRenderer) {
         m_coordinateRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    }
+
+    // 绘制点云
+    Logger::debug("  Drawing point cloud...");
+    if (m_pointCloudRenderer && m_pluginContext) {
+        m_pointCloudRenderer->updatePoints(m_pluginContext);
+        m_pointCloudRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
     }
 
     // 检查是否有UI需要更新和渲染
@@ -278,6 +295,12 @@ void Renderer::cleanup() {
     if (m_gridRenderer) {
         m_gridRenderer->cleanup();
         m_gridRenderer.reset();
+    }
+
+    // 清理点云渲染器
+    if (m_pointCloudRenderer) {
+        m_pointCloudRenderer->cleanup();
+        m_pointCloudRenderer.reset();
     }
 
     if (m_descriptorPool != VK_NULL_HANDLE) {

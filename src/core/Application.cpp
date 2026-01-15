@@ -69,7 +69,10 @@ bool Application::init() {
             m_renderer.get(),
             m_camera.get()
         );
-        
+
+        // 设置渲染器的PluginContext
+        m_renderer->setPluginContext(m_pluginContext.get());
+
         // 初始化插件管理器
         if (!m_pluginManager->init(m_pluginContext.get())) {
             Logger::error("Failed to initialize plugin manager!");

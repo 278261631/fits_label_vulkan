@@ -236,6 +236,10 @@ void VulkanContext::createLogicalDevice() {
     Logger::debug("Created queue create infos, size: {}", queueCreateInfos.size());
 
     VkPhysicalDeviceFeatures deviceFeatures{};
+    // Enable large points for point cloud rendering
+    deviceFeatures.largePoints = VK_TRUE;
+    // Enable wide lines for coordinate system rendering
+    deviceFeatures.wideLines = VK_TRUE;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
