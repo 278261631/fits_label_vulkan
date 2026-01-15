@@ -73,6 +73,9 @@ bool Application::init() {
         // 设置渲染器的PluginContext
         m_renderer->setPluginContext(m_pluginContext.get());
 
+        // 设置输入处理器的PluginContext用于点选择
+        m_inputHandler->setPluginContext(m_pluginContext.get());
+
         // 初始化插件管理器
         if (!m_pluginManager->init(m_pluginContext.get())) {
             Logger::error("Failed to initialize plugin manager!");

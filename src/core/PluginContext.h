@@ -18,7 +18,7 @@ class PluginContext {
 public:
     PluginContext(VulkanContext* vulkanContext, Renderer* renderer, Camera* camera)
         : m_vulkanContext(vulkanContext), m_renderer(renderer), m_camera(camera),
-          m_pointCloudDirty(false) {}
+          m_pointCloudDirty(false), m_selectedPointIndex(-1), m_selectionDirty(false) {}
 
     VulkanContext* getVulkanContext() const { return m_vulkanContext; }
     Renderer* getRenderer() const { return m_renderer; }
@@ -37,6 +37,15 @@ public:
     bool isPointCloudDirty() const { return m_pointCloudDirty; }
     void setPointCloudDirty(bool dirty) { m_pointCloudDirty = dirty; }
 
+    // Point selection interface
+    void setSelectedPointIndex(int index) {
+        m_selectedPointIndex = index;
+        m_selectionDirty = true;
+    }
+    int getSelectedPointIndex() const { return m_selectedPointIndex; }
+    bool isSelectionDirty() const { return m_selectionDirty; }
+    void setSelectionDirty(bool dirty) { m_selectionDirty = dirty; }
+
 private:
     VulkanContext* m_vulkanContext;
     Renderer* m_renderer;
@@ -44,4 +53,7 @@ private:
 
     std::vector<PluginPointData> m_pointCloudData;
     bool m_pointCloudDirty = false;
+
+    int m_selectedPointIndex = -1;  // -1 means no selection
+    bool m_selectionDirty = false;
 };

@@ -2,7 +2,11 @@
 #include "Camera.h"
 #include "UI.h"
 #include "Logger.h"
+#include "PluginContext.h"
 #include <imgui.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <limits>
+#include <cstdio>
 
 #include <iostream>
 
@@ -133,7 +137,14 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
                     Logger::trace("Stopped camera panning");
                 }
             }
-            // Left mouse button: reserved for point selection (future feature)
+            // Left mouse button: point selection
+            else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                if (action == GLFW_PRESS) {
+                    double xpos, ypos;
+                    glfwGetCursorPos(window, &xpos, &ypos);
+                    s_instance->pickPoint(xpos, ypos);
+                }
+            }
         }
     }
 }
@@ -229,6 +240,70 @@ void InputHandler::keyCallback(GLFWwindow* window, int key, int scancode, int ac
 }
 
 void InputHandler::windowSizeCallback(GLFWwindow* window, int width, int height) {
-    // 窗口大小变化处理
-    // 这里可以添加窗口大小变化的逻辑
+    // Window resize handling
+}
+
+void InputHandler::pickPoint(double mouseX, double mouseY) {
+    if (!m_pluginContext || !m_pluginContext->hasPointCloudData()) {
+        return;
+    }
+
+    // Get window size
+    int windowWidth, windowHeight;
+    glfwGetWindowSize(m_window, &windowWidth, &windowHeight);
+
+    // Get camera matrices
+    glm::mat4 viewMatrix = m_camera->getViewMatrix();
+    glm::mat4 projMatrix = m_camera->getProjectionMatrix();
+    glm::mat4 vpMatrix = projMatrix * viewMatrix;
+
+    const auto& points = m_pluginContext->getPointCloudData();
+
+    float minDist = (std::numeric_limits<float>::max)();
+    int closestIndex = -1;
+
+    // Find closest point to mouse position in screen space
+    for (size_t i = 0; i < points.size(); i++) {
+        const auto& pt = points[i];
+        glm::vec4 worldPos(pt.x, pt.y, pt.z, 1.0f);
+
+        // Transform to clip space
+        glm::vec4 clipPos = vpMatrix * worldPos;
+
+        // Skip points behind camera
+        if (clipPos.w <= 0) continue;
+
+        // Perspective divide to NDC
+        glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+
+        // Convert to screen coordinates
+        float screenX = (ndc.x + 1.0f) * 0.5f * windowWidth;
+        float screenY = (1.0f - ndc.y) * 0.5f * windowHeight;  // Y is flipped
+
+        // Calculate distance to mouse
+        float dx = screenX - (float)mouseX;
+        float dy = screenY - (float)mouseY;
+        float dist = dx * dx + dy * dy;
+
+        if (dist < minDist) {
+            minDist = dist;
+            closestIndex = (int)i;
+        }
+    }
+
+    // Check if click is close enough to a point (within 20 pixels)
+    float threshold = 20.0f * 20.0f;  // squared distance
+    if (closestIndex >= 0 && minDist < threshold) {
+        const auto& pt = points[closestIndex];
+
+        // Print coordinates to console
+        Logger::info("[Point Selected] Index: {} | X: {:.2f}, Y: {:.2f}, Z: {:.2f} | Color: ({:.2f}, {:.2f}, {:.2f})",
+                    closestIndex, pt.x, pt.y, pt.z, pt.r, pt.g, pt.b);
+
+        // Also print to stdout for visibility
+        printf("[Point] X: %.2f, Y: %.2f, Z: %.2f\n", pt.x, pt.y, pt.z);
+
+        // Set selected point index
+        m_pluginContext->setSelectedPointIndex(closestIndex);
+    }
 }

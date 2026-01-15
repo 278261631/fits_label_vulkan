@@ -37,17 +37,23 @@ bool PointCloudRenderer::init() {
 }
 
 void PointCloudRenderer::updatePoints(PluginContext* pluginContext) {
-    if (!pluginContext || !pluginContext->isPointCloudDirty()) {
+    if (!pluginContext) {
         return;
     }
-    
+
+    bool needsUpdate = pluginContext->isPointCloudDirty() || pluginContext->isSelectionDirty();
+    if (!needsUpdate) {
+        return;
+    }
+
     const auto& points = pluginContext->getPointCloudData();
     if (points.empty()) {
         m_hasData = false;
         pluginContext->setPointCloudDirty(false);
+        pluginContext->setSelectionDirty(false);
         return;
     }
-    
+
     // Clean up old buffer
     if (m_vertexBuffer != VK_NULL_HANDLE) {
         vkDestroyBuffer(m_vulkanContext->getDevice(), m_vertexBuffer, nullptr);
@@ -57,24 +63,37 @@ void PointCloudRenderer::updatePoints(PluginContext* pluginContext) {
         vkFreeMemory(m_vulkanContext->getDevice(), m_vertexBufferMemory, nullptr);
         m_vertexBufferMemory = VK_NULL_HANDLE;
     }
-    
+
+    int selectedIndex = pluginContext->getSelectedPointIndex();
+
     // Convert plugin points to vertices
     m_vertices.clear();
     m_vertices.reserve(points.size());
-    
-    for (const auto& p : points) {
+
+    for (size_t i = 0; i < points.size(); i++) {
+        const auto& p = points[i];
         PointVertex v;
         v.position = glm::vec3(p.x, p.y, p.z);
-        v.color = glm::vec3(p.r, p.g, p.b);
-        v.size = p.size;
+
+        // Highlight selected point with yellow color and larger size
+        if ((int)i == selectedIndex) {
+            v.color = glm::vec3(1.0f, 1.0f, 0.0f);  // Yellow
+            v.size = p.size * 3.0f;  // 3x larger
+        } else {
+            v.color = glm::vec3(p.r, p.g, p.b);
+            v.size = p.size;
+        }
         m_vertices.push_back(v);
     }
-    
+
     createVertexBuffer();
     m_hasData = true;
     pluginContext->setPointCloudDirty(false);
-    
-    Logger::info("PointCloudRenderer updated with {} points", m_vertices.size());
+    pluginContext->setSelectionDirty(false);
+
+    if (pluginContext->isPointCloudDirty()) {
+        Logger::info("PointCloudRenderer updated with {} points", m_vertices.size());
+    }
 }
 
 void PointCloudRenderer::createVertexBuffer() {
