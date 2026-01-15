@@ -80,35 +80,35 @@ bool InputHandler::isUIInteraction() const {
 
 void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (s_instance) {
-        // 检查是否在UI元素上，如果是则不处理相机控制
+        // Check if interacting with UI elements
         bool isUIInteraction = s_instance->isUIInteraction();
-        
+
         if (action == GLFW_PRESS) {
-            Logger::trace("Mouse button {} pressed - UI Interaction: {}", 
-                         (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" : 
-                          button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"), 
+            Logger::trace("Mouse button {} pressed - UI Interaction: {}",
+                         (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" :
+                          button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"),
                          isUIInteraction ? "YES" : "NO");
         } else if (action == GLFW_RELEASE) {
-            Logger::trace("Mouse button {} released - UI Interaction: {}", 
-                         (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" : 
-                          button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"), 
+            Logger::trace("Mouse button {} released - UI Interaction: {}",
+                         (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" :
+                          button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"),
                          isUIInteraction ? "YES" : "NO");
         }
-        
-        // 如果是UI交互，需要重置相机控制状态
+
+        // Reset camera control state if UI interaction
         if (isUIInteraction) {
-            // 在UI交互开始时，重置所有相机控制状态
             bool wasRotating = s_instance->m_isRotating;
             bool wasPanning = s_instance->m_isPanning;
             s_instance->m_isRotating = false;
             s_instance->m_isPanning = false;
-            
+
             if (wasRotating || wasPanning) {
-                Logger::trace("Reset camera control state due to UI interaction (wasRotating: {}, wasPanning: {})", 
+                Logger::trace("Reset camera control state due to UI interaction (wasRotating: {}, wasPanning: {})",
                              wasRotating, wasPanning);
             }
         } else {
-            if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            // Right mouse button: rotate camera (like Manim/astro_viewer)
+            if (button == GLFW_MOUSE_BUTTON_RIGHT) {
                 if (action == GLFW_PRESS) {
                     s_instance->m_isRotating = true;
                     double xpos, ypos;
@@ -119,7 +119,9 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
                     s_instance->m_isRotating = false;
                     Logger::trace("Stopped camera rotation");
                 }
-            } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+            }
+            // Middle mouse button: pan camera
+            else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
                 if (action == GLFW_PRESS) {
                     s_instance->m_isPanning = true;
                     double xpos, ypos;
@@ -131,6 +133,7 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
                     Logger::trace("Stopped camera panning");
                 }
             }
+            // Left mouse button: reserved for point selection (future feature)
         }
     }
 }

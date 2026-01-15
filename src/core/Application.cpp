@@ -91,12 +91,12 @@ bool Application::init() {
         }
         
         if (config.isDebugMode()) {
-            Logger::info("=== 相机控制说明 ===");
-            Logger::info("- 左键 + 拖动: 旋转相机");
-            Logger::info("- 中键 + 拖动: 平移相机");
-            Logger::info("- 鼠标滚轮: 缩放");
-            Logger::info("- ESC: 退出程序");
-            Logger::info("==================");
+            Logger::info("=== Camera Controls ===");
+            Logger::info("- Right Mouse + Drag: Rotate camera");
+            Logger::info("- Middle Mouse + Drag: Pan camera");
+            Logger::info("- Mouse Wheel: Zoom");
+            Logger::info("- ESC: Exit");
+            Logger::info("=======================");
         }
 
         m_running = true;
