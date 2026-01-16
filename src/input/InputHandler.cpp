@@ -87,64 +87,14 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
         // Check if interacting with UI elements
         bool isUIInteraction = s_instance->isUIInteraction();
 
-        if (action == GLFW_PRESS) {
-            Logger::trace("Mouse button {} pressed - UI Interaction: {}",
-                         (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" :
-                          button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"),
-                         isUIInteraction ? "YES" : "NO");
-        } else if (action == GLFW_RELEASE) {
-            Logger::trace("Mouse button {} released - UI Interaction: {}",
-                         (button == GLFW_MOUSE_BUTTON_LEFT ? "LEFT" :
-                          button == GLFW_MOUSE_BUTTON_RIGHT ? "RIGHT" : "MIDDLE"),
-                         isUIInteraction ? "YES" : "NO");
-        }
-
-        // Reset camera control state if UI interaction
-        if (isUIInteraction) {
-            bool wasRotating = s_instance->m_isRotating;
-            bool wasPanning = s_instance->m_isPanning;
-            s_instance->m_isRotating = false;
-            s_instance->m_isPanning = false;
-
-            if (wasRotating || wasPanning) {
-                Logger::trace("Reset camera control state due to UI interaction (wasRotating: {}, wasPanning: {})",
-                             wasRotating, wasPanning);
-            }
-        } else {
-            // Right mouse button: rotate camera (like Manim/astro_viewer)
-            if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                if (action == GLFW_PRESS) {
-                    s_instance->m_isRotating = true;
-                    double xpos, ypos;
-                    glfwGetCursorPos(window, &xpos, &ypos);
-                    s_instance->m_lastMousePos = glm::vec2((float)xpos, (float)ypos);
-                    Logger::trace("Started camera rotation (mouse pos: {}, {})", (float)xpos, (float)ypos);
-                } else if (action == GLFW_RELEASE) {
-                    s_instance->m_isRotating = false;
-                    Logger::trace("Stopped camera rotation");
-                }
-            }
-            // Middle mouse button: pan camera
-            else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-                if (action == GLFW_PRESS) {
-                    s_instance->m_isPanning = true;
-                    double xpos, ypos;
-                    glfwGetCursorPos(window, &xpos, &ypos);
-                    s_instance->m_lastMousePos = glm::vec2((float)xpos, (float)ypos);
-                    Logger::trace("Started camera panning (mouse pos: {}, {})", (float)xpos, (float)ypos);
-                } else if (action == GLFW_RELEASE) {
-                    s_instance->m_isPanning = false;
-                    Logger::trace("Stopped camera panning");
-                }
-            }
-            // Left mouse button: point selection
-            else if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                if (action == GLFW_PRESS) {
-                    double xpos, ypos;
-                    glfwGetCursorPos(window, &xpos, &ypos);
-                    s_instance->pickPoint(xpos, ypos);
-                }
-            }
+        // Camera controls disabled for redesign
+        // TODO: Implement new camera control system
+        
+        // Keep point selection active
+        if (!isUIInteraction && button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            s_instance->pickPoint(xpos, ypos);
         }
     }
 }
@@ -152,55 +102,17 @@ void InputHandler::mouseButtonCallback(GLFWwindow* window, int button, int actio
 void InputHandler::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
     if (s_instance) {
         glm::vec2 currentPos((float)xpos, (float)ypos);
-        glm::vec2 delta = currentPos - s_instance->m_lastMousePos;
-
-        // 检查是否在UI元素上，如果是则不处理相机控制
-        bool isUIInteraction = s_instance->isUIInteraction();
-
-        Logger::trace("Mouse move: ({}, {}) delta: ({}, {}) - UI Interaction: {} - Rotating: {} - Panning: {}", 
-                     (float)xpos, (float)ypos, delta.x, delta.y, 
-                     isUIInteraction ? "YES" : "NO",
-                     s_instance->m_isRotating ? "YES" : "NO",
-                     s_instance->m_isPanning ? "YES" : "NO");
-
-        // 如果是UI交互，重置相机控制状态
-        if (isUIInteraction) {
-            bool wasRotating = s_instance->m_isRotating;
-            bool wasPanning = s_instance->m_isPanning;
-            s_instance->m_isRotating = false;
-            s_instance->m_isPanning = false;
-            
-            if (wasRotating || wasPanning) {
-                Logger::trace("Reset camera control state due to UI interaction during mouse move (wasRotating: {}, wasPanning: {})", 
-                             wasRotating, wasPanning);
-            }
-        } else {
-            if (s_instance->m_isRotating) {
-                s_instance->m_camera->rotate(delta.x, delta.y);
-                Logger::trace("Camera rotation applied: ({}, {})", delta.x, delta.y);
-            } else if (s_instance->m_isPanning) {
-                s_instance->m_camera->pan(delta.x, delta.y);
-                Logger::trace("Camera panning applied: ({}, {})", delta.x, delta.y);
-            }
-        }
-
         s_instance->m_lastMousePos = currentPos;
+        
+        // Camera controls disabled for redesign
+        // TODO: Implement new camera control system
     }
 }
 
 void InputHandler::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     if (s_instance) {
-        // 检查是否在UI元素上，如果是则不处理相机控制
-        bool isUIInteraction = s_instance->isUIInteraction();
-
-        Logger::trace("Mouse scroll: ({}, {}) - UI Interaction: {}", xoffset, yoffset, isUIInteraction ? "YES" : "NO");
-
-        if (!isUIInteraction) {
-            s_instance->m_camera->zoom((float)yoffset);
-            Logger::trace("Camera zoom applied: {}", (float)yoffset);
-        } else {
-            Logger::trace("Camera zoom skipped due to UI interaction");
-        }
+        // Camera zoom disabled for redesign
+        // TODO: Implement new camera zoom system
     }
 }
 

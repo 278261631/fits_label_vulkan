@@ -169,11 +169,11 @@ void Renderer::drawFrame() {
     
     vkCmdBeginRenderPass(m_vulkanContext->getCommandBuffers()[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    // 绘制网格（先绘制，作为背景）
-    Logger::debug("  Drawing grid...");
-    if (m_gridRenderer) {
-        m_gridRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
-    }
+    // 绘制网格（先绘制，作为背景） - DISABLED
+    // Logger::debug("  Drawing grid...");
+    // if (m_gridRenderer) {
+    //     m_gridRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    // }
 
     // 绘制演示物体 - DISABLED
     // Logger::debug("  Drawing demo object...");
@@ -181,11 +181,11 @@ void Renderer::drawFrame() {
     //     m_demoObjectRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
     // }
 
-    // 绘制坐标系
-    Logger::debug("  Drawing coordinate system...");
-    if (m_coordinateRenderer) {
-        m_coordinateRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
-    }
+    // 绘制坐标系 - DISABLED
+    // Logger::debug("  Drawing coordinate system...");
+    // if (m_coordinateRenderer) {
+    //     m_coordinateRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    // }
 
     // 绘制点云
     Logger::debug("  Drawing point cloud...");

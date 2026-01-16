@@ -112,14 +112,14 @@ void UI::update() {
     Logger::debug("  Calling ImGui::NewFrame...");
     ImGui::NewFrame();
 
-    // Draw grid labels (must be after NewFrame, before Render)
-    if (m_gridRenderer) {
-        m_gridRenderer->drawLabels();
-    }
+    // Draw grid labels (must be after NewFrame, before Render) - DISABLED
+    // if (m_gridRenderer) {
+    //     m_gridRenderer->drawLabels();
+    // }
 
-    // 绘制坐标系和网格
-    Logger::debug("  Drawing coordinate system...");
-    drawCoordinateSystem();
+    // 绘制坐标系和网格 - DISABLED
+    // Logger::debug("  Drawing coordinate system...");
+    // drawCoordinateSystem();
 
     // 绘制控制面板
     Logger::debug("  Drawing control panel...");
