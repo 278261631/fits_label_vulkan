@@ -18,24 +18,26 @@ void Camera::update() {
 }
 
 void Camera::rotate(float deltaX, float deltaY) {
-    // 计算当前相机到中心点的相对距离
+    // Calculate current distance from camera to center
     glm::vec3 relativePos = m_position - m_centerPoint;
     float distance = glm::length(relativePos);
-    
-    // 更新旋转角度
+
+    // Update rotation angles
     m_rotationY += deltaX * m_rotationSensitivity;
     m_rotationX -= deltaY * m_rotationSensitivity;
 
-    // 限制X轴旋转范围
-    if (m_rotationX > 3.14f) m_rotationX = 3.14f;
-    if (m_rotationX < -3.14f) m_rotationX = -3.14f;
-    
-    // 根据旋转角度和距离重新计算相机相对位置
+    // Limit X rotation to upper hemisphere only (avoid crossing XZ plane)
+    // This prevents the gimbal lock / flip issue
+    const float PI = 3.14159265f;
+    if (m_rotationX > PI * 0.49f) m_rotationX = PI * 0.49f;  // ~88 degrees from top
+    if (m_rotationX < 0.02f) m_rotationX = 0.02f;            // ~1 degree from top
+
+    // Calculate camera position based on spherical coordinates
     float x = sin(m_rotationY) * sin(m_rotationX) * distance;
     float y = cos(m_rotationX) * distance;
     float z = cos(m_rotationY) * sin(m_rotationX) * distance;
-    
-    // 更新相机位置，保持相对于中心点的位置
+
+    // Update camera position relative to center point
     m_position = m_centerPoint + glm::vec3(x, y, z);
 }
 
@@ -139,17 +141,18 @@ void Camera::setView(const std::string& view) {
 }
 
 void Camera::recalculateMatrices() {
-    // 正交投影矩阵
+    // Orthographic projection matrix
     float aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
     float size = 100.0f * m_zoom;
     m_projectionMatrix = glm::ortho(-size * aspectRatio, size * aspectRatio, -size, size, -1000.0f, 1000.0f);
 
-    // 视图矩阵：使用正确的坐标系设置，使相机始终看向中心点
-    glm::mat4 lookAt = glm::lookAt(m_position, m_centerPoint, glm::vec3(0.0f, 1.0f, 0.0f));
-    
-    // 使用lookAt矩阵作为视图矩阵
-    m_viewMatrix = lookAt;
+    // Calculate up vector based on camera orientation
+    // Use the rotation angles to compute a consistent up vector
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
 
-    // 计算视图投影矩阵
+    // View matrix
+    m_viewMatrix = glm::lookAt(m_position, m_centerPoint, up);
+
+    // View-projection matrix
     m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
 }
