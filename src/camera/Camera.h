@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <string>
 
 class Camera {
@@ -11,20 +12,20 @@ public:
 
     void update();
 
-    // 视角控制
+    // View control
     void rotate(float deltaX, float deltaY);
     void pan(float deltaX, float deltaY);
     void zoom(float delta);
-    void setCenterPoint(const glm::vec3& center);  // 设置观察中心点
-    void moveCenterPoint(const glm::vec3& offset); // 移动观察中心点
-    void setView(const std::string& view);         // 设置特定视图 (Front, Back, Left, Right, Top, Bottom, Perspective)
+    void setCenterPoint(const glm::vec3& center);
+    void moveCenterPoint(const glm::vec3& offset);
+    void setView(const std::string& view);
 
-    // 获取矩阵
+    // Get matrices
     const glm::mat4& getViewMatrix() const { return m_viewMatrix; }
     const glm::mat4& getProjectionMatrix() const { return m_projectionMatrix; }
     const glm::mat4& getViewProjectionMatrix() const { return m_viewProjectionMatrix; }
 
-    // 获取相机参数
+    // Get camera parameters
     float getRotationX() const { return m_rotationX; }
     float getRotationY() const { return m_rotationY; }
     float getZoom() const { return m_zoom; }
@@ -37,19 +38,21 @@ private:
     int m_width;
     int m_height;
 
-    // 相机参数
+    // Camera parameters
     float m_rotationX;
     float m_rotationY;
     float m_zoom;
+    float m_distance;  // Distance from center
     glm::vec3 m_position;
-    glm::vec3 m_centerPoint;  // 观察中心点
+    glm::vec3 m_centerPoint;
+    glm::quat m_orientation;  // Quaternion for rotation
 
-    // 矩阵
+    // Matrices
     glm::mat4 m_viewMatrix;
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewProjectionMatrix;
 
-    // 灵敏度
+    // Sensitivity
     float m_rotationSensitivity;
     float m_panSensitivity;
     float m_zoomSensitivity;
