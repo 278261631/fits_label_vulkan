@@ -175,11 +175,11 @@ void Renderer::drawFrame() {
         m_gridRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
     }
 
-    // 绘制演示物体
-    Logger::debug("  Drawing demo object...");
-    if (m_demoObjectRenderer) {
-        m_demoObjectRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
-    }
+    // 绘制演示物体 - DISABLED
+    // Logger::debug("  Drawing demo object...");
+    // if (m_demoObjectRenderer) {
+    //     m_demoObjectRenderer->draw(m_vulkanContext->getCommandBuffers()[currentFrame]);
+    // }
 
     // 绘制坐标系
     Logger::debug("  Drawing coordinate system...");
